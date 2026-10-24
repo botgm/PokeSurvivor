@@ -7,8 +7,8 @@ Todo lo del código ya está preparado: sólo faltan los pasos marcados como **T
 Estado a 10-10-2026:
 
 - [x] Dominio comprado en Cloudflare (servidores DNS de Cloudflare activos).
-- [x] `pokesurvivor.com` y `www.pokesurvivor.com` añadidos a Firebase → dominios
-      autorizados (el inicio de sesión con Google funcionará desde el primer día).
+- [x] `pokesurvivor.com` y `www.pokesurvivor.com` apuntando a GitHub Pages.
+      (El juego es offline: ya no hay autenticación ni servidores que autorizar.)
 - [x] Páginas en español e inglés, sitemap, robots, 404 e imagen para compartir,
       generadas y probadas (Lighthouse: SEO 100, accesibilidad 100).
 - [x] Script del paso final ensayado: `tools/activar_dominio.sh`.
@@ -77,14 +77,13 @@ Cuando el DNS funcione, lo hago todo yo:
 2. Lo subo a GitHub y en GitHub Pages pongo el dominio `pokesurvivor.com`.
 3. Espero a que GitHub cree el certificado y activo **Enforce HTTPS**.
 4. Compruebo en un navegador real: la web, `www.` → sin `www`, la dirección vieja
-   de github.io → la nueva, el inglés en `/en/`, entrar con cuenta y con Google,
-   el ranking y el cooperativo.
+   de github.io → la nueva, el inglés en `/en/` y que el juego carga y se juega.
 5. Pongo `https://pokesurvivor.com` como web del repositorio de GitHub.
 
-**Ojo con las partidas de invitado:** se guardan en el navegador y van ligadas a la
-dirección. Quien juegue como invitado en `jpter78.github.io` no verá esa partida en
-`pokesurvivor.com` (las cuentas registradas sí, porque están en la nube). Si alguien
-te lo pregunta: que cree una cuenta antes del cambio.
+**Ojo con las partidas:** el juego guarda sólo en el navegador y va ligado a la
+dirección. Quien juegue en `jpter78.github.io` no verá esa partida en
+`pokesurvivor.com`: puede exportarla desde Ajustes → Partida e importarla en la
+dirección nueva.
 
 ## Paso 4 · Google Search Console y Bing (TÚ, después del paso 3)
 

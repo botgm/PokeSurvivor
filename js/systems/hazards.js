@@ -5,8 +5,7 @@
  *   zone  círculo (zonas de Tierra/Fuego/Veneno, explosiones, caídas de salto)
  *   beam  rayo recto desde el enemigo (Eléctrico, Psíquico, Dragón, Hielo)
  *
- * Cada ordenador dibuja los peligros y comprueba sólo SU Pokémon. En
- * cooperativo los crea el anfitrión y los manda con 'hz'.
+ * Cada ordenador dibuja los peligros y comprueba sólo SU Pokémon.
  *
  * Los de Arceus (systems/judgment.js) quitan un % de la vida (pct) sin mirar
  * tipos ni defensa (pure), y la Sentencia cae como un pilar de luz (vis).
@@ -15,13 +14,9 @@ G.Hazards = (() => {
   let list = [];
 
   /** h: { kind, x, y, r | angle, len, w, delay, dmg, type, color, pct?, pure?, vis? } */
-  function add(h, fromNet = false) {
+  function add(h) {
     const o = Object.assign({ t: 0, hit: false, end: 0.3 }, h);
     list.push(o);
-    if (!fromNet && G.Coop.isHost) {
-      G.Coop.broadcast(['hz', { kind: o.kind, x: Math.round(o.x), y: Math.round(o.y), r: o.r, angle: o.angle, len: o.len, w: o.w,
-                                delay: o.delay, dmg: Math.round(o.dmg), type: o.type, color: o.color, pct: o.pct, pure: o.pure, vis: o.vis }]);
-    }
     return o;
   }
 

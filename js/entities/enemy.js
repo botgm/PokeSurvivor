@@ -100,14 +100,6 @@
     hurt(amount, color = '#fff', dirX = 0, dirY = 0, knock = 0, eff = null) {
       if (this.dead) return;
       const d = Math.max(1, Math.round(amount));
-      // Copia de un enemigo del anfitrión: el golpe se le manda a él, que es
-      // quien decide si cae. Aquí sólo se ve (número, destello y animación).
-      if (this.remote) {
-        G.Coop.hit(this, d, color, dirX, dirY, knock);
-        this.hp = Math.max(1, this.hp - d);
-        this.showHurt(d, color, dirX, dirY, eff);
-        return;
-      }
       // Escudo: absorbe primero.
       if (this.shield > 0) {
         const a = Math.min(this.shield, d);
@@ -123,7 +115,6 @@
         this.kx += nx * knock;
         this.ky += ny * knock;
       }
-      if (G.Coop.isHost) G.Coop.hurtShown(this, d, color);
       if (this.hp <= 0) this.die();
     }
 
@@ -139,16 +130,13 @@
     }
 
     applySlow(factor, dur = 1.2) {
-      if (this.remote) { G.Coop.status(this, 's', factor); return; }
       this.slow = Math.max(this.slow, factor);
       this.slowT = Math.max(this.slowT, dur);
     }
     applyBurn(stacks = 1) {
-      if (this.remote) { G.Coop.status(this, 'b', stacks); return; }
       this.burn = Math.min(8, this.burn + stacks); this.burnT = 3;
     }
     applyPoison(stacks = 1) {
-      if (this.remote) { G.Coop.status(this, 'p', stacks); return; }
       this.poison = Math.min(8, this.poison + stacks); this.poisonT = 4;
     }
 
@@ -161,13 +149,6 @@
       const cy = this.y - this.bodyH * 0.5;
       G.FX.burst(this.x, cy, col, this.boss ? 34 : 9, this.boss ? 260 : 120);
       G.FX.ring(this.x, this.y, this.r, this.r * (this.boss ? 6 : 2.6), col, this.boss ? 0.6 : 0.3, this.boss ? 6 : 3);
-      // En una copia, el botín y los shinies los reparte el anfitrión.
-      if (this.remote) {
-        if (this.boss) G.Camera.kick(0.9);
-        G.Audio.sfx(this.boss ? 'bossDown' : 'faint');
-        if (this.shiny) { G.FX.burst(this.x, cy, '#ffe9a0', 30, 220); G.FX.ring(this.x, this.y, this.r, this.r * 7, '#9ae6ff', 0.7, 5); }
-        return;
-      }
       // (Los legendarios de la Sentencia de Arceus sólo dan experiencia.)
       if (this.boss && !this.judge) {
         G.Camera.kick(0.9);
@@ -196,42 +177,6 @@
         G.FX.ring(this.x, this.y, this.r, this.r * 7, '#9ae6ff', 0.7, 5);
         if (G.onShinyCaught) G.onShinyCaught(this);
       }
-    }
-
-    /**
-     * Copia de un enemigo del anfitrión: va hacia la última posición recibida
-     * (más la velocidad estimada, para que no avance a saltos) y anima según
-     * se mueva o según la animación que tenga en el anfitrión.
-     */
-    netUpdate(dt) {
-      this.anim.update(dt);
-      if (this.flash > 0) this.flash -= dt;
-      if (this.dead) { this.fade -= dt; return; }
-      if (this.touchCd > 0) this.touchCd -= dt;
-      this.bob += dt * 6;
-      if (this.shiny) {
-        this.sparkT -= dt;
-        if (this.sparkT <= 0) { this.sparkT = 0.22; G.FX.twinkle(this.x + G.U.rand(-this.r, this.r) * 1.2, this.y - G.U.rand(4, this.bodyH * 1.1)); }
-      }
-      const n = this.net;
-      if (!n) return;
-      // Se adelanta hasta 0,3 s (por si llegan pocas posiciones por segundo).
-      const lead = Math.min(0.3, n.age);
-      n.age += dt;
-      const tx = n.x + n.vx * lead, ty = n.y + n.vy * lead;
-      const ox = this.x, oy = this.y;
-      if (G.U.dist2(this.x, this.y, tx, ty) > 160 * 160) { this.x = tx; this.y = ty; }
-      else { this.x = G.U.damp(this.x, tx, 12, dt); this.y = G.U.damp(this.y, ty, 12, dt); }
-      const vx = (this.x - ox) / (dt || 1), vy = (this.y - oy) / (dt || 1);
-      const moving = Math.abs(vx) + Math.abs(vy) > 8;
-      this.anim.dir = n.dir;
-      // Animaciones de una vez (embestida, disparo...) que ha empezado el anfitrión.
-      if (n.anim !== this.lastNetAnim) {
-        this.lastNetAnim = n.anim;
-        const a = G.Coop.ANIMS[n.anim];
-        if (a && a !== 'Idle' && a !== 'Walk' && a !== 'Faint') this.anim.play(a, { speed: 1.4 });
-      }
-      this.anim.loop(moving ? 'Walk' : 'Idle');
     }
 
     update(dt, pl) {
@@ -551,18 +496,17 @@
       const base = Math.atan2(ay, ax);
       for (let i = 0; i < n; i++) {
         const a = base + (n === 1 ? 0 : (i / (n - 1) - 0.5) * spread);
-        const shot = G.Projectiles.spawn({
+        G.Projectiles.spawn({
           x: this.x, y: this.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
           dmg: this.shotDmg() * k, r: 7, life: 2.4, friendly: false, color: '#ff7a9e', mtype: type,
           vis: G.VFX.forType(type)
         });
-        if (G.Coop.isHost) G.Coop.enemyShot(shot, type);
       }
       this.anim.play('Shoot');
       G.FX.ring(this.x, this.y - G.LIFT, 4, 14, '#ff7a9e', 0.2, 2);
     }
 
-    /** Lo que hace cada personalidad cuando le toca (anfitrión / solitario). */
+    /** Lo que hace cada personalidad cuando le toca. */
     special(pl, dx, dy) {
       const col = G.U.TYPE_COLOR[this.atkType] || '#ff7a9e';
       switch (this.behavior) {
@@ -604,7 +548,6 @@
       }
       this.anim.play('Charge');
       G.FX.ring(this.x, this.y, 8, 150, '#5fe08a', 0.5, 3);
-      if (G.Coop.isHost) G.Coop.broadcast(['fxr', Math.round(this.x), Math.round(this.y), 150, '#5fe08a']);
       if (n && G.Camera.sees(this.x, this.y, 0)) G.Audio.sfx('heal');
     }
 
@@ -614,7 +557,6 @@
       for (const e of near) { e.shield = Math.max(e.shield, e.maxHp * 0.35); e.shieldT = 8; }
       this.anim.play('Charge');
       G.FX.ring(this.x, this.y, 8, 160, '#7fc8ff', 0.5, 3);
-      if (G.Coop.isHost) G.Coop.broadcast(['fxr', Math.round(this.x), Math.round(this.y), 160, '#7fc8ff']);
     }
 
     summon() {
@@ -678,7 +620,7 @@
       const alpha = this.dead ? G.U.clamp(this.fade / 0.5, 0, 1) : 1;
       if (alpha <= 0) return;
 
-      const gold = this.golden || this.behavior === 'thief' || (this.remote && !this.boss && G.Events.golden);
+      const gold = this.golden || this.behavior === 'thief';
       if ((this.boss || this.shiny || gold) && !this.dead) {
         ctx.save();
         ctx.globalAlpha = (gold && !this.boss ? 0.32 : 0.22) + Math.sin(this.bob * 0.5) * 0.06;
@@ -699,7 +641,7 @@
       if (this.dead) return;
 
       // Escudo: burbuja azul.
-      if (this.shield > 0 || (this.net && this.net.st & 4)) {
+      if (this.shield > 0) {
         ctx.save();
         ctx.globalAlpha = 0.35 + Math.sin(this.bob) * 0.08;
         ctx.strokeStyle = '#9fd8ff'; ctx.lineWidth = 2;
@@ -709,10 +651,10 @@
         ctx.restore();
       }
 
-      if (this.burn > 0 || this.poison > 0 || (this.net && this.net.st & 3)) {
+      if (this.burn > 0 || this.poison > 0) {
         ctx.save();
         ctx.globalAlpha = 0.45;
-        ctx.fillStyle = this.burn > 0 || (this.net && this.net.st & 1) ? '#ff8a3d' : '#c86bdc';
+        ctx.fillStyle = this.burn > 0 ? '#ff8a3d' : '#c86bdc';
         ctx.beginPath(); ctx.ellipse(this.x, this.y, this.r * 1.2, this.r * 0.5, 0, 0, 6.2832); ctx.fill();
         ctx.restore();
       }
@@ -748,25 +690,9 @@
     function add(e) {
       list.push(e);
       byId.set(e.id, e);
-      if (G.Coop.isHost) G.Coop.enemyAdded(e);
       return e;
     }
     function get(id) { return byId.get(id); }
-
-    /** Copia local de un enemigo del anfitrión (cooperativo). */
-    function addRemote(o) {
-      if (byId.has(o.id)) return byId.get(o.id);
-      const def = { dex: o.dex, hp: o.hp, spd: 0, dmg: o.dmg, xp: 0, behavior: o.beh || 'remote' };
-      const e = new Enemy(def, o.x, o.y, { hp: 1, spd: 1, dmg: 1 }, o.boss);
-      e.id = o.id;
-      e.remote = true;
-      if (o.shiny) e.makeShiny();
-      e.maxHp = o.hp; e.hp = o.hp;
-      e.net = { x: o.x, y: o.y, vx: 0, vy: 0, age: 0, dir: 0, anim: 0, st: 0 };
-      list.push(e);
-      byId.set(e.id, e);
-      return e;
-    }
 
     // --- arena de la grieta ---
     let stashed = null;
@@ -778,30 +704,12 @@
       list = []; corpses = [];
     }
 
-    /** Al volver: quita los de la arena y devuelve los del mapa (avisando a los demás). */
+    /** Al volver: quita los de la arena y devuelve los del mapa. */
     function restore() {
-      for (const e of list) { byId.delete(e.id); if (G.Coop.isHost) G.Coop.enemyGone(e, false); }
+      for (const e of list) byId.delete(e.id);
       list = []; corpses = [];
       for (const e of stashed || []) add(e);
       stashed = null;
-    }
-
-    /** Invitado: borra las copias (llegarán otra vez del anfitrión). */
-    function clearRemote() {
-      for (const e of list) if (e.remote) byId.delete(e.id);
-      list = list.filter(e => !e.remote);
-      corpses = corpses.filter(e => !e.remote);
-    }
-
-    /** Quita una copia (el anfitrión dice que ha caído o que se ha alejado). */
-    function removeRemote(id, died) {
-      const e = byId.get(id);
-      if (!e) return;
-      byId.delete(id);
-      if (died) { e.die(); G.Progress.kill(e); }
-      const i = list.indexOf(e);
-      if (i >= 0) list.splice(i, 1);
-      if (died) corpses.push(e);
     }
 
     function key(cx, cy) { return cx * 73856093 ^ cy * 19349663; }
@@ -878,8 +786,8 @@
     }
 
     /**
-     * @param players  [jugador local, ...compañeros]. Las estadísticas de la
-     *                 run (derrotados, jefes) se apuntan en el primero.
+     * @param players  [jugador local]. Las estadísticas de la run
+     *                 (derrotados, jefes) se apuntan en el primero.
      */
     // Segundos que un rezagado tiene que llevar fuera de la vista antes de volver por delante.
     const LAG_T = 2.5;
@@ -887,7 +795,7 @@
     function update(dt, players) {
       if (!Array.isArray(players)) players = [players];
       const pl = players[0];
-      // Velocidad suavizada de cada jugador (vale también para los compañeros).
+      // Velocidad suavizada del jugador.
       for (const p of players) {
         if (p._px != null && dt > 0) {
           const k = Math.min(1, dt * 5);
@@ -897,14 +805,10 @@
         p._px = p.x; p._py = p.y;
       }
       rebuildGrid();
-      for (const e of list) {
-        if (e.remote) e.netUpdate(dt);
-        else e.update(dt, nearestPlayer(players, e.x, e.y) || pl);
-      }
-      if (!G.Coop.active || G.Coop.isHost) separate(dt);
+      for (const e of list) e.update(dt, nearestPlayer(players, e.x, e.y) || pl);
+      separate(dt);
       for (let i = list.length - 1; i >= 0; i--) {
         const e = list[i];
-        if (e.remote) continue;
         if (e.dead) {
           pl.kills++;
           if (e.boss && !e.judge) pl.bosses++;
@@ -912,7 +816,6 @@
           corpses.push(e);
           list.splice(i, 1);
           byId.delete(e.id);
-          if (G.Coop.isHost) G.Coop.enemyGone(e, true);
           continue;
         }
         const near = nearestPlayer(players, e.x, e.y) || pl;
@@ -921,13 +824,12 @@
           G.FX.burst(e.x, e.y - 10, '#ffd23f', 16, 140);
           G.Spawner.say('¡' + e.name + ' se ha escapado!', 2.4);
           list.splice(i, 1); byId.delete(e.id);
-          if (G.Coop.isHost) G.Coop.enemyGone(e, false);
           continue;
         }
         if (e.boss || e.shiny || G.Rift.inArena) continue;
         // Rezagados: los que se quedan atrás mientras corres y llevan un rato
-        // FUERA DE LA VISTA (de todos) vuelven a salir por delante de ti. Así
-        // no se puede huir sin más, y nunca desaparece uno que estés viendo.
+        // FUERA DE LA VISTA vuelven a salir por delante de ti. Así no se puede
+        // huir sin más, y nunca desaparece uno que estés viendo.
         const d2 = G.U.dist2(e.x, e.y, near.x, near.y);
         const R = G.Camera.outerRadius() + 40;
         const unseen = d2 > R * R && !G.Camera.sees(e.x, e.y, 60);
@@ -937,11 +839,11 @@
         else if (!unseen) e.lagT = 0;
         if ((unseen && e.lagT > LAG_T) || d2 > 1400 * 1400) {
           e.lagT = 0;
-          if (!G.Spawner.ahead(e, near)) { list.splice(i, 1); byId.delete(e.id); if (G.Coop.isHost) G.Coop.enemyGone(e, false); }
+          if (!G.Spawner.ahead(e, near)) { list.splice(i, 1); byId.delete(e.id); }
         }
       }
       for (let i = corpses.length - 1; i >= 0; i--) {
-        if (corpses[i].remote) corpses[i].netUpdate(dt); else corpses[i].update(dt, pl);
+        corpses[i].update(dt, pl);
         if (corpses[i].fade <= 0) corpses.splice(i, 1);
       }
       if (corpses.length > 120) corpses.splice(0, corpses.length - 120);
@@ -958,7 +860,7 @@
     function bossAlive() { return list.some(e => e.boss && !e.dead); }
     function shinies() { return list.filter(e => e.shiny && !e.dead); }
 
-    return { clear, all, add, get, addRemote, removeRemote, stash, restore, clearRemote, update, drawables, queryCircle, rebuildGrid, bossAlive, shinies, nearestPlayer,
+    return { clear, all, add, get, stash, restore, update, drawables, queryCircle, rebuildGrid, bossAlive, shinies, nearestPlayer,
              get count() { return list.length; } };
   })();
 })();

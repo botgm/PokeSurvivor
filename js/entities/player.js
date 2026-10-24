@@ -75,7 +75,7 @@ G.Player = class Player {
     this.statsTaken = {};      // mejoras de stat cogidas (condición de evolución)
   }
 
-  /** Segundos que hay que estar junto a un compañero caído para levantarlo. */
+  /** Segundos del anillo al volver a levantarse tras caer. */
   static get REVIVE_TIME() { return 3; }
 
   // (×2 y luego ×4 el 2026-10-10: se subía de nivel demasiado rápido.)
@@ -200,7 +200,7 @@ G.Player = class Player {
    */
   cast(m) {
     // Vidasfera: cada ataque cuesta un poco de vida (nunca te deja KO).
-    if (this.hasItem('lifeorb') && m.kind !== 'orbit' && m.kind !== 'trail' && !this.remote) {
+    if (this.hasItem('lifeorb') && m.kind !== 'orbit' && m.kind !== 'trail') {
       this.hp = Math.max(1, this.hp - Math.max(1, this.maxHp * 0.01));
     }
     const anim = { melee: 'Attack', beam: 'Shoot', projectile: 'Shoot', nova: 'Attack',
@@ -329,7 +329,7 @@ G.Player = class Player {
     if (this.regen > 0) this.hp = Math.min(this.maxHp, this.hp + this.regen * dt);
 
     // --- movimiento con colisiones ---
-    // (En cooperativo la pausa no para el juego: sólo te quedas quieto.)
+    // Congelado (aparición, animación): sólo te quedas quieto.
     const [ax, ay] = this.frozen ? [0, 0] : G.Input.axis();
     this.walking = ax !== 0 || ay !== 0;
     const s = this.spd;
@@ -383,7 +383,7 @@ G.Player = class Player {
     this.anim.loop(this.walking ? 'Walk' : 'Idle', this.walking ? s / 110 : 1);
   }
 
-  /** Vuelve a levantarse (lo revive un compañero en cooperativo). */
+  /** Vuelve a levantarse (al volver de la arena de la grieta). */
   revive(frac = 0.5) {
     this.dead = false;
     this.hp = Math.max(1, this.maxHp * frac);
@@ -393,43 +393,6 @@ G.Player = class Player {
     G.FX.ring(this.x, this.y, 6, 70, '#5fe08a', 0.5, 4);
     G.FX.burst(this.x, this.y - this.bodyH * 0.5, '#9dffb8', 18, 150);
     G.Audio.sfx('heal');
-  }
-
-  // ---------------- compañero (cooperativo) ----------------
-
-  /**
-   * Un compañero en otro ordenador: su dueño manda su estado (posición, vida,
-   * movimiento activo...) y aquí se sigue con suavidad.
-   * n = { x, y, ang, walk, hp, maxHp, dead, mv, ml, mag, aim, rev }
-   */
-  netUpdate(dt) {
-    this.anim.update(dt);
-    const n = this.net;
-    if (!n) return;
-    if (this.flash > 0) this.flash -= dt;
-    if (this.attackFace > 0) this.attackFace -= dt;
-    if (G.U.dist2(this.x, this.y, n.x, n.y) > 300 * 300) { this.x = n.x; this.y = n.y; }
-    else { this.x = G.U.damp(this.x, n.x, 14, dt); this.y = G.U.damp(this.y, n.y, 14, dt); }
-    if (n.hp < this.hp - 0.5 && !n.dead) this.flash = 0.14;
-    this.hp = n.hp; this.maxHp = n.maxHp;
-    this.magnet = n.mag || this.magnet;
-    this.reviveT = n.rev || 0;
-    if (n.dead && !this.dead) { this.dead = true; this.anim.play('Faint', { hold: true }); G.Projectiles.clearOrbs(this); }
-    else if (!n.dead && this.dead) this.revive(n.hp / (n.maxHp || 1));
-    // Movimiento activo (para el halo, el HUD y los orbes).
-    if (n.mv && (!this.moves[0] || this.moves[0].id !== n.mv || this.moves[0].lvl !== n.ml) && G.Moves.BY_ID[n.mv]) {
-      this.moves = [G.Moves.instance(n.mv, n.ml || 1)];
-      this.slots = [this.moves.slice()];
-      this.active = 0;
-      G.Projectiles.clearOrbs(this);
-    }
-    if (this.dead) return;
-    this.walking = !!n.walk;
-    this.moveAngle = n.ang;
-    this.aim = n.aim;
-    const face = this.attackFace > 0 || !this.walking ? this.aim : this.moveAngle;
-    this.anim.dir = G.Sprites.dirFromAngle(face);
-    this.anim.loop(this.walking ? 'Walk' : 'Idle', this.walking ? this.baseSpd / 110 : 1);
   }
 
   draw(ctx) {
@@ -473,7 +436,7 @@ G.Player = class Player {
       i++;
     }
 
-    // Cooperativo: anillo de "reviviendo" y nombre encima.
+    // Anillo de "reviviendo" (al volver de la arena).
     if (this.dead && this.reviveT > 0) {
       ctx.save();
       ctx.strokeStyle = '#5fe08a';
@@ -481,22 +444,6 @@ G.Player = class Player {
       ctx.beginPath();
       ctx.ellipse(this.x, this.y, this.r * 2.4, this.r * 1.0, 0, -Math.PI / 2, -Math.PI / 2 + 6.2832 * Math.min(1, this.reviveT / G.Player.REVIVE_TIME));
       ctx.stroke();
-      ctx.restore();
-    }
-    if (this.tag) {
-      ctx.save();
-      ctx.font = '700 7px Pixelify,"Segoe UI",sans-serif';
-      ctx.textAlign = 'center';
-      const y = this.y - this.bodyH - 8;
-      ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(0,0,0,.75)';
-      ctx.strokeText(this.tag, this.x, y);
-      ctx.fillStyle = this.dead ? '#ff8a96' : this.tagColor || '#fff';
-      ctx.fillText(this.tag, this.x, y);
-      if (this.dead) {
-        ctx.font = '700 6px Pixelify,"Segoe UI",sans-serif';
-        ctx.strokeText(this.revLabel || '', this.x, y - 8);
-        ctx.fillText(this.revLabel || '', this.x, y - 8);
-      }
       ctx.restore();
     }
   }

@@ -5,10 +5,6 @@
  *
  * Cada enemigo tiene 1/4096 de salir shiny (como en los juegos clásicos).
  * Una run mata 1.500–4.000, así que sale uno cada 1–3 partidas.
- *
- * Cooperativo (sólo en el anfitrión): aparecen alrededor de un jugador vivo
- * al azar, fuera de la vista de TODOS, y hay más y más fuertes según cuántos
- * jugáis (ver G.Coop.scaleRate / scaleHp).
  */
 G.Spawner = (() => {
   // Tope de enemigos a la vez (antes 420: con tantos se ralentizaba). Cuando
@@ -81,7 +77,7 @@ G.Spawner = (() => {
     const pt = freePoint(pl, angle == null ? Math.random() * 6.2832 : angle, isFlyer(def));
     if (!pt) return null;
     const shiny = rollShiny(def.dex);
-    const e = new G.Enemy(def, pt[0], pt[1], scaled(G.Enemies.scale(t), G.Coop.scaleHp(players.length) * hpK(t)));
+    const e = new G.Enemy(def, pt[0], pt[1], scaled(G.Enemies.scale(t), hpK(t)));
     e.dmg *= DMG_K; e.xp = Math.round(e.xp * XP_K);
     if (G.EnemyMgr.count >= CAP * ELITE_FROM) { e.maxHp = e.hp = Math.round(e.maxHp * 1.6); e.dmg *= 1.25; e.xp = Math.round(e.xp * 1.6); }
     if (shiny) e.makeShiny();
@@ -96,7 +92,7 @@ G.Spawner = (() => {
 
   function spawnBoss(pl, t, b) {
     const [x, y] = ringPoint(pl, Math.random() * 6.2832);
-    const e = new G.Enemy(b, x, y, scaled(G.Enemies.bossScale(t), G.Coop.scaleHp(players.length) * (players.length > 1 ? 1.4 : 1)), true);
+    const e = new G.Enemy(b, x, y, scaled(G.Enemies.bossScale(t), 1), true);
     if (rollShiny(b.dex)) e.makeShiny();
     G.EnemyMgr.add(e);
     say('¡' + e.name + (e.shiny ? ' shiny' : '') + ' salvaje apareció!', 3.2);
@@ -105,7 +101,7 @@ G.Spawner = (() => {
     return e;
   }
 
-  /** @param who  el jugador o la lista de jugadores (cooperativo) */
+  /** @param who  el jugador */
   function update(dt, who, t) {
     players = Array.isArray(who) ? who : [who];
     if (announceT > 0) announceT -= dt;
@@ -127,7 +123,7 @@ G.Spawner = (() => {
 
     // --- goteo normal ---
     if (G.EnemyMgr.count < CAP) {
-      acc += rate(t) * G.Coop.scaleRate(players.length) * (bossFight ? 0.25 : 1) * dt;
+      acc += rate(t) * (bossFight ? 0.25 : 1) * dt;
       let n = Math.floor(acc);
       acc -= n;
       while (n-- > 0 && G.EnemyMgr.count < CAP) spawnOne(anchor(), t);
@@ -139,7 +135,7 @@ G.Spawner = (() => {
       surgeT = G.U.rand(38, 56);
       const base = Math.random() * 6.2832;
       const target = anchor();
-      const n = Math.min(CAP - G.EnemyMgr.count, Math.round((14 + Math.floor(t / 22)) * G.Coop.scaleRate(players.length) * 0.4));
+      const n = Math.min(CAP - G.EnemyMgr.count, Math.round((14 + Math.floor(t / 22)) * 0.4));
       for (let i = 0; i < n; i++) spawnOne(target, t, base + G.U.rand(-0.55, 0.55));
       say('¡Marea de Pokémon!', 2.2);
       G.Audio.sfx('surge');
@@ -168,17 +164,12 @@ G.Spawner = (() => {
   }
 
   /** Aviso grande en pantalla (también lo usan el bioma y los shinies). */
-  /** @param local  sólo en este ordenador (no se manda a los compañeros) */
-  function say(text, secs = 2.6, local = false) {
+  function say(text, secs = 2.6) {
     announce = text; announceT = secs;
-    if (G.Coop.isHost && !local) G.Coop.say(text, secs);
   }
 
   function banner() { return announceT > 0 ? { text: announce, t: announceT } : null; }
 
-  /** Invitado en cooperativo: sólo corre el reloj del aviso. */
-  function tickBanner(dt) { if (announceT > 0) announceT -= dt; }
-
-  return { reset, update, ahead, burst, tickBanner, banner, say, rate, SHINY_RATE, CAP,
+  return { reset, update, ahead, burst, banner, say, rate, SHINY_RATE, CAP,
            debugForceShiny(n = 1) { forceShiny = n; } };
 })();

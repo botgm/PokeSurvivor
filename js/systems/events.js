@@ -14,17 +14,13 @@
  * Duendes del tesoro (1-2 por partida, ver Enemy behavior 'thief'): un
  * Meowth cargado de monedas (o, 1 de cada 4, un Gholdengo con un ticket ×10)
  * que huye y se escapa a los 15 s si no lo atrapas.
- *
- * Cooperativo: decide el anfitrión y avisa con 'ev' (ver coop.js). Todos ven lo
- * mismo y el premio es para todos.
  */
 G.Events = (() => {
   const EVERY = [240, 300], DUR = 30, LOST_TIME = 120;
   const THIEF_FIRST = [120, 240], THIEF_NEXT = [240, 360], THIEF_LIFE = 15;
-  const authority = () => !G.Coop.active || G.Coop.isHost;
 
   let nextT = 0, cur = null, last = null, thiefT = 0, thieves = 0;
-  let lost = null;      // { dex, name, x, y, hp, maxHp, state, follow, tx, ty, t, anim, r, hitCd, netT, grant }
+  let lost = null;      // { dex, name, x, y, hp, maxHp, state, follow, tx, ty, t, anim, r, hitCd, grant }
 
   function reset() {
     nextT = G.U.rand(EVERY[0], EVERY[1]);
@@ -37,10 +33,10 @@ G.Events = (() => {
   function update(dt, players, time) {
     if (cur) {
       cur.t += dt;
-      if (cur.id !== 'lost' && cur.t >= cur.dur && authority()) end();
+      if (cur.id !== 'lost' && cur.t >= cur.dur) end();
     }
     if (lost) lostTick(dt, players);
-    if (!authority() || G.Rift.inArena || G.Judgment.active) return;
+    if (G.Rift.inArena || G.Judgment.active) return;
 
     if (thieves < 2) {
       thiefT -= dt;
@@ -68,16 +64,15 @@ G.Events = (() => {
       const defs = G.Enemies.hordeDefs(type, time);
       G.Sprites.preload(defs.map(d => d.dex));
       cur = { id, t: 0, dur: DUR, type, defs };
-      G.Spawner.burst(Math.round(6 * G.Coop.scaleRate(players.length)));
+      G.Spawner.burst(6);
     } else if (id === 'gold') {
       cur = { id, t: 0, dur: DUR };
-      for (const e of G.EnemyMgr.all()) if (!e.remote) e.makeGolden();
+      for (const e of G.EnemyMgr.all()) e.makeGolden();
     } else {
       if (!spawnLost(players)) return;
       cur = { id, t: 0, dur: Infinity };
     }
     announce();
-    if (G.Coop.isHost) G.Coop.broadcast(['ev', 's', id, cur.type || '']);
   }
 
   function announce() {
@@ -93,7 +88,6 @@ G.Events = (() => {
   function end() {
     if (!cur) return;
     cur = null;
-    if (G.Coop.isHost) G.Coop.broadcast(['ev', 'e']);
   }
 
   /** Lo que sale durante una horda (lo usa G.Enemies.bagAt). */
@@ -151,7 +145,7 @@ G.Events = (() => {
 
   function makeLost(o) {
     const mon = G.DEX_BY[o.dex];
-    lost = Object.assign({ name: mon ? mon.name : '', maxHp: 100, t: 0, hitCd: 0, netT: 0, follow: null,
+    lost = Object.assign({ name: mon ? mon.name : '', maxHp: 100, t: 0, hitCd: 0, follow: null,
                            anim: new G.Sprites.Animator(o.dex, 1), r: G.Sprites.bodyRadius(o.dex) }, o);
   }
 
@@ -159,7 +153,6 @@ G.Events = (() => {
     const L = lost;
     L.t += dt;
     L.anim.update(dt);
-    if (!authority()) { L.anim.loop(L.moving ? 'Walk' : 'Idle'); return; }
 
     if (L.state === 'wait') {
       const p = players.find(o => !o.dead && G.U.dist2(o.x, o.y, L.x, L.y) < (o.r + L.r + 18) ** 2);
@@ -193,19 +186,12 @@ G.Events = (() => {
     }
     if (L.flash > 0) L.flash -= dt;
     if (L.t > LOST_TIME) return gone(L.name + ' se ha cansado de esperar y se ha ido…');
-
-    if (G.Coop.isHost && (L.netT -= dt) <= 0) {
-      L.netT = 0.1;
-      G.Coop.broadcast(['ev', 'lp', L.dex, Math.round(L.x), Math.round(L.y), Math.round(L.hp), L.state === 'follow' ? 1 : 0,
-                        Math.round(L.tx), Math.round(L.ty), L.anim.dir, L.moving ? 1 : 0]);
-    }
   }
 
   function rescued() {
     const L = lost;
     for (let i = 0; i < 12; i++) G.Pickups.drop('coin', L.tx + G.U.rand(-40, 40), L.ty + G.U.rand(-30, 30), 5);
     G.Pickups.drop('ticket', L.tx, L.ty - 12, 1);
-    if (G.Coop.isHost) G.Coop.broadcast(['ev', 'rw', L.dex, L.grant ? 1 : 0]);
     reward(L.dex, L.grant);
     lost = null;
     end();
@@ -223,28 +209,9 @@ G.Events = (() => {
   }
 
   function gone(msg) {
-    if (G.Coop.isHost) G.Coop.broadcast(['ev', 'lx', msg]);
     say(msg, 3);
     lost = null;
     end();
-  }
-
-  // ---------------- red ----------------
-
-  function onNet(ev) {
-    switch (ev[1]) {
-      case 's': cur = { id: ev[2], t: 0, dur: ev[2] === 'lost' ? Infinity : DUR, type: ev[3] || null }; break;
-      case 'e': cur = null; break;
-      case 'lp': {
-        const [, , dex, x, y, hp, follow, tx, ty, dir, moving] = ev;
-        if (!lost || lost.dex !== dex) makeLost({ dex, x, y, tx, ty, hp, state: follow ? 'follow' : 'wait' });
-        Object.assign(lost, { x, y, hp, tx, ty, moving: !!moving, state: follow ? 'follow' : 'wait' });
-        lost.anim.dir = dir;
-        break;
-      }
-      case 'rw': reward(ev[2], !!ev[3]); lost = null; break;
-      case 'lx': say(ev[2], 3); lost = null; break;
-    }
   }
 
   // ---------------- dibujo ----------------
@@ -347,7 +314,7 @@ G.Events = (() => {
   }
 
   return {
-    reset, update, bag, onNet, drawables, drawHud,
+    reset, update, bag, drawables, drawHud,
     get golden() { return !!cur && cur.id === 'gold'; },
     get current() { return cur ? cur.id : null; },
     /** Para pruebas. */

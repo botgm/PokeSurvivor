@@ -1,14 +1,13 @@
 /* ============ run-ui.js — cartas de nivel, pausa y fin de run ============ */
 G.RunUI = (() => {
   const $ = G.UI.$;
-  let offers = null, offerCb = null, coopMode = false;
+  let offers = null, offerCb = null;
 
-  /** @param coop  en grupo: tras elegir, se queda esperando a los demás */
-  function showLevelUp(level, list, cb, coop = false) {
-    offerCb = cb; coopMode = coop;
+  function showLevelUp(level, list, cb) {
+    offerCb = cb;
     $('lvl-num').textContent = level;
     $('lvl-wait').textContent = '';
-    $('lvl-wait').classList.toggle('hidden', !coop);
+    $('lvl-wait').classList.add('hidden');
     $('cards').classList.remove('done');
     renderCards(list);
     $('lvl-reroll').onclick = reroll;
@@ -17,7 +16,7 @@ G.RunUI = (() => {
 
   /**
    * Cambiar las cartas: 1 vez gratis por partida y 1 más por cada jefe
-   * derrotado (en grupo cuentan los jefes del equipo; cada uno tiene los suyos).
+   * derrotado.
    */
   function rerollsLeft() {
     const p = G.Game.player;
@@ -64,23 +63,8 @@ G.RunUI = (() => {
     const c = offers[i], cb = offerCb;
     offers = null; offerCb = null;
     $('lvl-reroll').classList.add('hidden');
-    if (coopMode) {
-      // Se queda la carta elegida a la vista mientras eligen los demás.
-      $('cards').querySelectorAll('.card').forEach((el, j) => el.classList.toggle('picked', j === i));
-      $('cards').classList.add('done');
-    } else G.UI.hide('scr-levelup');
+    G.UI.hide('scr-levelup');
     cb(c);
-  }
-
-  /** Cooperativo: quién falta por elegir. */
-  function setWaiting(names) {
-    const me = G.Social.me ? G.Social.me.name : '';
-    const others = names.filter(n => n !== me);
-    const list = a => a.length > 1 ? a.slice(0, -1).join(', ') + ' y ' + a[a.length - 1] : a[0];
-    $('lvl-wait').textContent = !names.length ? ''
-      : !others.length ? 'Elige tu carta'
-      : names.includes(me) ? 'Faltan por elegir: ' + list([...others, 'tú'])
-      : 'Esperando a ' + list(others) + '…';
   }
 
   function closeLevelUp() {
@@ -122,7 +106,7 @@ G.RunUI = (() => {
       ${r.record ? '<div style="grid-column:1/-1;text-align:center" class="gold">¡Nuevo récord de tiempo!</div>' : ''}
       ${askSupport(r) ? `<div class="support-ask" id="over-ask" style="grid-column:1/-1">
         <button class="x" type="button" aria-label="Cerrar">×</button>
-        <p>¿Te está gustando PokéSurvivor? Lo hago yo solo y los servidores cuestan dinero. Si quieres, puedes ayudarme a mantenerlo en línea.</p>
+        <p>¿Te está gustando PokéSurvivor? Lo hago yo solo y mantener la web cuesta dinero. Si quieres, puedes ayudarme a mantenerlo en línea.</p>
         <a class="btn small gold" href="${G.Funding.url}" target="_blank" rel="noopener">${G.Icons.html('heart', 14)} Apoyar en Ko-fi</a>
       </div>` : ''}`;
     const ask = $('over-ask');
@@ -221,10 +205,9 @@ G.RunUI = (() => {
     renderBond();
   }
 
-  function showPause(coop = false) {
+  function showPause() {
     G.UI.soundControls($('pause-sound'));
-    $('pause-coop').classList.toggle('hidden', !coop);
-    $('btn-quit').textContent = coop ? 'Salir de la partida' : 'Abandonar run';
+    $('btn-quit').textContent = 'Abandonar run';
     G.UI.show('scr-pause');
   }
 
@@ -233,5 +216,5 @@ G.RunUI = (() => {
     $('btn-quit').onclick = onQuit;
   }
 
-  return { showLevelUp, reroll, showItemChoice, showBond, pickBond, bondBack, pick, setWaiting, closeLevelUp, showOver, wirePause, showPause };
+  return { showLevelUp, reroll, showItemChoice, showBond, pickBond, bondBack, pick, closeLevelUp, showOver, wirePause, showPause };
 })();

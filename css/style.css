@@ -15,6 +15,15 @@
   font-weight: 551 900;
   font-display: block;
 }
+/* Vietnamita: Pixelify Sans no incluye los signos con dấu (ế, ộ, ư, ạ…). Esta
+ * fuente pixel (VT323, OFL) cubre los caracteres vietnamitas y va de reserva
+ * justo después de Pixelify, para no salirse del estilo pixel art. */
+@font-face {
+  font-family: 'Pixelify VI';
+  src: url('../assets/fonts/VT323-vietnamese.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
 
 :root {
   --ink: #ffffff;
@@ -30,7 +39,7 @@
   --green: #5fe08a;
   --shadow: #0a1430;
   --r1: #9fb1c9; --r2: #5fe08a; --r3: #4fb4ff; --r4: #c47bff; --r5: #ffcb3d;
-  --font: 'Pixelify', 'Segoe UI', system-ui, sans-serif;
+  --font: 'Pixelify', 'Pixelify VI', 'Segoe UI', system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; }

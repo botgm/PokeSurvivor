@@ -3,9 +3,9 @@
  *   llega al momento; si no hay conexión, la última copia guardada.
  * - Sprites, iconos y fuente: no cambian nunca, se sirven de la caché
  *   (se van guardando según se usan: no se descarga todo de golpe).
- * - Firebase y demás servicios de fuera no se tocan.
+ * - Nada sale de este dispositivo: el juego es offline (no hay servidores).
  */
-const CODE = 'ps-code-v1', ART = 'ps-art-v1';
+const CODE = 'ps-code-v2', ART = 'ps-art-v1';
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CODE).then(c => c.addAll(['./', './index.html', './css/style.css', './manifest.webmanifest'])).catch(() => {}));

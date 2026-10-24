@@ -7,13 +7,13 @@
  *      con su rueda dorada, destello y viaje a una arena enorme y arrasada
  *      (Ruinas del Juicio). Arceus baja del cielo por un pilar de luz y cae
  *      con una onda de choque. La primera vez se ve entera; después se puede
- *      saltar (en cooperativo sólo el anfitrión).
+ *      saltar.
  *   2. Pelea: Arceus es INVENCIBLE (no es un enemigo: los ataques no le
  *      apuntan). Te persigue cada vez más deprisa; tocarle quita el 40 % de la
  *      vida y lanza la Sentencia (pilares de luz), rayos en cruz y ondas, todo
  *      con aviso en el suelo. Ese daño ignora tipos y defensa.
  *   3. Cada 5 s acude un legendario al azar, cada uno con el DOBLE de vida y de
- *      daño que el anterior. El primero, según el daño que hacíais antes de la
+ *      daño que el anterior. El primero, según el daño que hacías antes de la
  *      Sentencia a UN enemigo (unos 3 s), para que no caiga al momento.
  *      Dan experiencia, pero nada más (ni monedas, ni tickets, ni objetos).
  *   4. Sin límite de tiempo: por muy fuerte que vayas (curación sin tope,
@@ -23,10 +23,6 @@
  * Mientras dura no sale nada más (ni oleadas, ni eventos, ni grietas; desde
  * el 28:00 ya no se abren grietas). Si a las 30:00 estás en una grieta o
  * eligiendo una carta, empieza al terminar.
- *
- * Cooperativo: lo decide el anfitrión. Mensajes (ver coop.js):
- *   'jd' cfg (empieza) · 'jk' (salta la animación)
- *   y en cada envío del anfitrión, ja: [x, y, animación, dirección] de Arceus.
  */
 G.Judgment = (() => {
   const AT = 30 * 60;
@@ -37,7 +33,6 @@ G.Judgment = (() => {
   // Línea de tiempo de la animación (segundos).
   const T_TITLE = 1.3, T_FLASH = 4.7, T_PORT = 5.1, T_DESC = 5.7, T_LAND = 7.9, T_BACK = 9.1, T_END = 10.1;
   const GOLD = '#ffd25e';
-  const authority = () => !G.Coop.active || G.Coop.isHost;
   const TS = () => G.Tiles.T * G.Sprites.PX;
 
   let phase = null;                   // null | 'cine' | 'fight'
@@ -79,34 +74,32 @@ G.Judgment = (() => {
 
   // ---------------- arranque ----------------
 
-  /** Quien manda: elige la arena y los legendarios, y avisa a todos. */
+  /** Elige la arena y los legendarios. */
   function start() {
     const pool = G.DEX.filter(p => p.leg && p.dex !== ARCEUS && G.SPRITE_META[p.dex]);
     const q = [];
     for (let i = 0; i < 40; i++) q.push(G.U.pick(pool).dex);
     const c = { tx: -6000 - Math.floor(Math.random() * 2000), ty: -6000 - Math.floor(Math.random() * 2000), q };
-    if (G.Coop.isHost) G.Coop.broadcast(['jd', c]);
     begin(c);
   }
 
-  /** En cada ordenador: empieza la animación. */
+  /** Empieza la animación. */
   function begin(c) {
     if (phase) return;
     cfg = c;
     phase = 'cine'; ct = 0; cues = {};
     const s = G.DB.save;
-    // La primera vez se ve entera; en grupo la salta el anfitrión.
-    canSkip = !!(s && s.stats && s.stats.judged > 0) && authority();
+    // La primera vez se ve entera; después se puede saltar.
+    canSkip = !!(s && s.stats && s.stats.judged > 0);
     G.Sprites.preload([ARCEUS, ...new Set(c.q.slice(0, 12))], 12000);
     cineAnim = new G.Sprites.Animator(ARCEUS, 1);
     G.Touch.reset();
     G.Audio.music(null);
   }
 
-  /** Salta la animación (tecla o toque; en grupo, el anfitrión). */
+  /** Salta la animación (tecla o toque). */
   function skip() {
     if (phase !== 'cine' || !canSkip || ct >= T_BACK) return;
-    if (G.Coop.isHost) G.Coop.broadcast(['jk']);
     doSkip();
   }
   function doSkip() {
@@ -121,7 +114,7 @@ G.Judgment = (() => {
     ported = true;
     const pl = G.Game.player, ts = TS();
     G.Rift.reset();
-    if (authority()) G.EnemyMgr.stash(); else G.EnemyMgr.clearRemote();
+    G.EnemyMgr.stash();
     G.Projectiles.clear();
     G.Combat.clearFields();
     G.Hazards.clear();
@@ -163,9 +156,9 @@ G.Judgment = (() => {
     land(true);
     arenaT = 0; bossT = 1.2; bossN = 0; downs = 0;
     G.Progress.event('judge');
-    // Vida del primer legendario: unos 3 s de vuestro daño a un enemigo (y un mínimo).
-    const n = G.Game.everyone().length, t = G.Game.st.time;
-    const floor = (3200 + t * 9) * 0.35 * G.Coop.scaleHp(n);
+    // Vida del primer legendario: unos 3 s de tu daño a un enemigo (y un mínimo).
+    const t = G.Game.st.time;
+    const floor = (3200 + t * 9) * 0.35;
     base = Math.max(floor, singleDps() * 3);
     G.Spawner.say('¡Huye de Arceus! Es invencible', 3, true);
   }
@@ -209,18 +202,16 @@ G.Judgment = (() => {
   function update(dt, pl, time) {
     if (!phase) {
       sampleDps(dt);                        // (para la vida del primer legendario)
-      if (authority() && time >= AT && !G.Rift.inArena) start();
+      if (time >= AT && !G.Rift.inArena) start();
       return;
     }
     if (phase !== 'fight') return;
     arenaT += dt;
     A.touchCd -= dt; A.spin += dt;
-    if (authority()) {
-      arceusTick(dt);
-      keepInside();
-      bossT -= dt;
-      if (bossT <= 0) { bossT = BOSS_EVERY; spawnBoss(); }
-    } else netTick(dt);
+    arceusTick(dt);
+    keepInside();
+    bossT -= dt;
+    if (bossT <= 0) { bossT = BOSS_EVERY; spawnBoss(); }
     A.anim.update(dt);
     touch(pl);
     ember(dt);
@@ -304,23 +295,7 @@ G.Judgment = (() => {
     }
   }
 
-  /** Invitado: Arceus va a donde dice el anfitrión. */
-  function netTick(dt) {
-    const n = A.net;
-    if (!n) return;
-    const ox = A.x, oy = A.y;
-    if (G.U.dist2(A.x, A.y, n.x, n.y) > 300 * 300) { A.x = n.x; A.y = n.y; }
-    else { A.x = G.U.damp(A.x, n.x, 10, dt); A.y = G.U.damp(A.y, n.y, 10, dt); }
-    A.anim.dir = n.dir;
-    if (n.anim !== A.lastNetAnim) {
-      A.lastNetAnim = n.anim;
-      const a = G.Coop.ANIMS[n.anim];
-      if (a === 'Charge' || a === 'Shoot' || a === 'Attack') A.anim.play(a);
-    }
-    A.anim.loop(Math.abs(A.x - ox) + Math.abs(A.y - oy) > 0.5 ? 'Walk' : 'Idle');
-  }
-
-  /** Tocar a Arceus (cada uno mira el suyo). */
+  /** Tocar a Arceus. */
   function touch(pl) {
     if (!pl || pl.dead || A.touchCd > 0) return;
     const rr = A.r + pl.r;
@@ -330,7 +305,7 @@ G.Judgment = (() => {
     pl.hurt(pl.maxHp * TOUCH, null, true);
     G.Camera.kick(0.6);
     G.FX.ring(pl.x, pl.y, 6, 70, GOLD, 0.4, 4);
-    if (authority()) A.anim.play('Attack', { speed: 1.4 });
+    A.anim.play('Attack', { speed: 1.4 });
   }
 
   /** Nadie sale de la arena (Arceus, los legendarios y tú). */
@@ -341,7 +316,7 @@ G.Judgment = (() => {
       if (d > max) { o.x = center.x + dx / d * max; o.y = center.y + dy / d * max; }
     };
     clampIn(A);
-    for (const e of G.EnemyMgr.all()) if (!e.remote) clampIn(e);
+    for (const e of G.EnemyMgr.all()) clampIn(e);
   }
 
   // ---------------- legendarios ----------------
@@ -672,26 +647,8 @@ G.Judgment = (() => {
     }
   }
 
-  // ---------------- red ----------------
-
-  function onEvent(ev) {
-    if (ev[0] === 'jd') begin(ev[1]);
-    else if (ev[0] === 'jk') doSkip();
-  }
-
-  /** Anfitrión: dónde está Arceus (va en cada envío). */
-  function netState() {
-    if (phase !== 'fight' || !A) return null;
-    const a = G.Coop.ANIMS.indexOf(A.anim.cur);
-    return [Math.round(A.x), Math.round(A.y), a < 0 ? 0 : a, A.anim.dir];
-  }
-  function netApply(a) {
-    if (!A || phase !== 'fight') return;
-    A.net = { x: a[0], y: a[1], anim: a[2], dir: a[3] };
-  }
-
   return {
-    AT, reset, noteDmg, update, cineTick, skip, bossDown, drawable, drawAir, drawOverlay, onEvent, netState, netApply,
+    AT, reset, noteDmg, update, cineTick, skip, bossDown, drawable, drawAir, drawOverlay,
     get active() { return !!phase; },
     get cinematic() { return phase === 'cine'; },
     /** Lo que suena: nada en la animación hasta que aterriza. */
@@ -701,6 +658,6 @@ G.Judgment = (() => {
     /** Para pruebas: vida del primer legendario y daño medido. */
     get debug() { return { base, single: singleDps(), samples: samples.length }; },
     /** Para pruebas: la Sentencia ya. */
-    debugStart() { if (!phase && authority()) start(); }
+    debugStart() { if (!phase) start(); }
   };
 })();

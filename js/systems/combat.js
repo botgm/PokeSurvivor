@@ -5,10 +5,6 @@
  *
  * Todo ocurre en el plano del suelo: (x, y) son pies / sombra.
  *
- * Cooperativo: cada ordenador ejecuta los ataques de SU jugador. Los de los
- * compañeros llegan por la red y se repiten como "fantasma" (ghostCast): se
- * ven igual, pero no hacen daño aquí (ya lo hizo su dueño).
- *
  * Lo que se queda en el mapa un rato (minas, meteoros que caen, torretas,
  * charcos del rastro) vive en `fields` y se actualiza/dibuja aquí.
  */
@@ -36,7 +32,6 @@ G.Combat = (() => {
     }
     m.t = Math.max(0.05, m.cd * pl.cdMul);
     pl.cast(m);
-    if (G.Coop.active) G.Coop.cast(pl, m);
     // Vínculo: su icono destella en el HUD al lanzarse (uno que explota pegado al
     // enemigo, como Ascuas tras Ataque Rápido, casi no se ve).
     m.castAt = performance.now();
@@ -501,7 +496,7 @@ G.Combat = (() => {
     if (pl.orbCastT <= 0) { pl.orbCastT = 1.6; pl.cast({ kind: 'orbit', cd: 1.6 }); }
   }
 
-  /** Repite el ataque de un compañero sólo para verlo (sin daño). */
+  /** Reproduce un ataque sólo visualmente (sin daño). */
   function ghostCast(pl, id, lvl, aim, evolved) {
     const def = G.Moves.BY_ID[id];
     if (!def || def.kind === 'orbit') return;
@@ -515,7 +510,7 @@ G.Combat = (() => {
     } finally { ghost = false; }
   }
 
-  /** Orbes de un compañero que tiene activo un movimiento de órbita (sólo visual). */
+  /** Orbes de un movimiento de órbita, sólo visuales. */
   function ghostOrbit(pl, dt, now) {
     const m = pl.activeMove();
     if (m && m.kind === 'orbit' && !pl.dead) orbit(pl, m, dt, now, true);
@@ -571,7 +566,7 @@ G.Combat = (() => {
       }
 
       // --- disparos de jugadores ---
-      // Orbes de un compañero: sólo se ven.
+      // Orbes visuales: sólo se ven.
       if (p.orb && p.ghost) continue;
       if (!p.orb) {
         const block = G.World.projectileBlock(p.x, p.y, p.r);
@@ -626,7 +621,7 @@ G.Combat = (() => {
           p.hits.add(e.id);
         }
 
-        // Disparo fantasma de un compañero: choca y se ve, pero no daña.
+        // Disparo fantasma: choca y se ve, pero no daña.
         if (p.ghost) {
           G.FX.sp('impact', p.vis ? p.vis.pal : 'normal', e.x, e.y - e.bodyH * 0.5, { life: 0.12, scale: 1 });
           if (p.pierce > 0) { p.pierce--; continue; }

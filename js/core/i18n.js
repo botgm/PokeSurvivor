@@ -1,7 +1,8 @@
-/* ============ i18n.js — idiomas (español / inglés) ============
- * El juego está escrito en español. Si el idioma es inglés, todo texto que
- * se enseña se traduce con el diccionario de js/data/lang-en.js, sin tener que
- * tocar cada pantalla:
+/* ============ i18n.js — idiomas (español / inglés / vietnamita) ============
+ * El juego está escrito en español. Si el idioma no es español, todo texto que
+ * se enseña se traduce con el diccionario del idioma (js/data/lang-en.js para
+ * inglés, js/data/lang-vi.js para vietnamita), sin tener que tocar cada
+ * pantalla:
  *   - el DOM (menús, cartas, avisos...) con un MutationObserver,
  *   - el canvas (HUD, avisos, números) envolviendo fillText/strokeText,
  *   - confirm()/alert().
@@ -18,22 +19,50 @@
  */
 G.I18n = (() => {
   const KEY = 'ps.lang';
+  const LANGS = ['es', 'en', 'vi'];      // idiomas con página propia /en/ · /vi/
   let saved = null;
   try { saved = localStorage.getItem(KEY); } catch (e) { /* nada */ }
-  const byPath = /\/en(\/|$)/.test(location.pathname) ? 'en' : null;
+  const mPath = /^\/(en|vi)(\/|$)/.exec(location.pathname);
+  const byPath = mPath ? mPath[1] : null;
   const nav = ((navigator.languages && navigator.languages[0]) || navigator.language || 'es').toLowerCase();
-  const lang = saved === 'es' || saved === 'en' ? saved : byPath || (nav.startsWith('es') ? 'es' : 'en');
+  const navLang = nav.startsWith('es') ? 'es' : nav.startsWith('vi') ? 'vi' : 'en';
+  const lang = LANGS.includes(saved) ? saved : (byPath || navLang);
   document.documentElement.lang = lang;
 
   const exact = new Map(), exactLow = new Map();
-  let patterns = [], frag = null, fragLow = null, fragMap = new Map();
+  let patterns = [], frag = null, fragMap = new Map();
   const cache = new Map();
   const L = '\\p{L}\\p{N}';
   const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-  /** Añade traducciones { 'texto en español': 'English text' }. */
-  function add(dict) {
-    const fr = [];
+  // Diccionario por idioma (la clave siempre es el texto en español, el idioma
+  // del juego). 'en' los traduce al inglés y 'vi' al vietnamita.
+  const DICTS = {};
+  let built = false;
+
+  /** Añade traducciones. `add(dict)` = inglés (compatibilidad); `add('vi', dict)`. */
+  function add(a, b) {
+    let code, dict;
+    if (typeof a === 'string') { code = a; dict = b || {}; }
+    else { code = 'en'; dict = a || {}; }
+    DICTS[code] = Object.assign(DICTS[code] || {}, dict);
+    built = false;   // se recompila con la próxima traducción
+  }
+
+  /**
+   * Diccionario del idioma actual: se parte del inglés y encima va el del
+   * idioma. Así lo que aún no esté traducido se ve en inglés, no en español.
+   */
+  function activeDict() {
+    const d = Object.assign({}, DICTS.en);
+    if (lang !== 'en') Object.assign(d, DICTS[lang]);
+    return d;
+  }
+
+  /** Compila un diccionario a las estructuras de búsqueda (exacto, patrones, fragmentos). */
+  function compile(dict) {
+    exact.clear(); exactLow.clear(); patterns = [];
+    fragMap = new Map();
     for (const [es, en] of Object.entries(dict)) {
       if (!en || es === en) continue;
       if (es.includes('{x}')) {
@@ -42,13 +71,20 @@ G.I18n = (() => {
       } else {
         exact.set(es, en);
         exactLow.set(es.toLowerCase(), en);
-        if (es.length >= 4 || /\s/.test(es)) { fr.push(es); fragMap.set(es.toLowerCase(), en); }
+        if (es.length >= 4 || /\s/.test(es)) fragMap.set(es.toLowerCase(), en);
       }
     }
     // Una sola expresión con todos los trozos (los más largos primero), sólo palabras enteras.
     const all = [...fragMap.keys()].sort((a, b) => b.length - a.length).map(reEsc).join('|');
     frag = all ? new RegExp(`(?<![${L}])(${all})(?![${L}])`, 'giu') : null;
     cache.clear();
+  }
+
+  /** Compila (una vez) el diccionario del idioma actual, o vacío si es español. */
+  function ensureBuilt() {
+    if (built) return;
+    built = true;
+    compile(lang === 'es' ? {} : activeDict());
   }
 
   function keepCase(src, en) {
@@ -60,6 +96,7 @@ G.I18n = (() => {
   function t(s) {
     if (lang === 'es' || !s || typeof s !== 'string') return s;
     if (!/\p{L}/u.test(s)) return s;
+    ensureBuilt();
     const c = cache.get(s);
     if (c !== undefined) return c;
     let r = core(s);

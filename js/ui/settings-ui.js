@@ -1,6 +1,6 @@
 /* ============ settings-ui.js — pantalla de Ajustes (PC y móvil) ============
  * Se abre por encima de lo que haya (menú o pausa) y al cerrar vuelve ahí.
- * Pestañas: Sonido · Gráficos · Controles · Cuenta · Acerca de.
+ * Pestañas: Sonido · Gráficos · Controles · Partida · Acerca de.
  * Los ajustes son de este dispositivo (G.Settings / G.Audio en el navegador).
  */
 G.SettingsUI = (() => {
@@ -75,7 +75,7 @@ G.SettingsUI = (() => {
     } else if (tab === 'gfx') {
       const auto = ['baja', 'media', 'alta'][G.Settings.autoLevel];
       box.innerHTML = section('Idioma', 'El juego se recarga al cambiarlo.')
-        + `<div class="chips set-chips" translate="no">${[['es', 'Español'], ['en', 'English']].map(([v, l]) =>
+        + `<div class="chips set-chips" translate="no">${[['es', 'Español'], ['en', 'English'], ['vi', 'Tiếng Việt']].map(([v, l]) =>
              `<button class="chip ${G.I18n.lang === v ? 'on' : ''}" data-lang="${v}">${l}</button>`).join('')}</div>`
         + section('Calidad', 'Cuántos efectos y partículas se dibujan. <b>Auto</b> la baja sola si el juego va a tirones (ahora: ' + auto + ').')
         + choice('quality', [['auto', 'Auto'], ['high', 'Alta'], ['mid', 'Media'], ['low', 'Baja']])
@@ -101,8 +101,8 @@ G.SettingsUI = (() => {
              <div><kbd>Esc</kbd> o <kbd>P</kbd></div><span>pausa</span>
              <div><kbd>1</kbd>–<kbd>3</kbd></div><span>elegir carta al subir de nivel</span>
            </div>`;
-    } else if (tab === 'acc') {
-      renderAccount(box);
+    } else if (tab === 'save') {
+      renderSave(box);
     } else {
       box.innerHTML = `<div class="about-logo">PokéSurvivor</div><p class="sub center">Versión ${esc(VERSION)}</p>`
         + `<p class="sub">Juego de fans <b>gratuito y sin ánimo de lucro</b>: sin anuncios ni compras. Pokémon y sus personajes son propiedad de Nintendo, Creatures y GAME FREAK; este proyecto no está afiliado a ellos.</p>`
@@ -111,11 +111,11 @@ G.SettingsUI = (() => {
              <li><b>Sprites:</b> PMD SpriteCollab y sus artistas (CC BY-NC 4.0).</li>
              <li><b>Datos de los Pokémon:</b> PokéAPI.</li>
              <li><b>Música y sonidos:</b> originales, generados por el propio juego.</li>
-             <li><b>Fuente:</b> Pixelify Sans (OFL).</li>
+             <li><b>Fuente:</b> Pixelify Sans (OFL) y VT323 (OFL) para el vietnamita.</li>
            </ul>`
         + `<div class="row wrap" style="justify-content:center;gap:8px">
-             ${window.PS_PAGES ? `<a class="btn small" href="${G.I18n.lang === 'en' ? 'en/guide/' : 'guia/'}" target="_blank">Guía y preguntas</a>
-             <a class="btn small" href="${G.I18n.lang === 'en' ? 'en/pokedex/' : 'pokedex/'}" target="_blank">Pokédex</a>` : ''}
+             ${window.PS_PAGES ? `<a class="btn small" href="${G.I18n.lang === 'es' ? 'guia/' : G.I18n.lang === 'vi' ? 'vi/guide/' : 'en/guide/'}" target="_blank">Guía y preguntas</a>
+             <a class="btn small" href="${G.I18n.lang === 'es' ? 'pokedex/' : G.I18n.lang === 'vi' ? 'vi/pokedex/' : 'en/pokedex/'}" target="_blank">Pokédex</a>` : ''}
              <button class="btn small" data-legal>Aviso legal y privacidad</button>
              <a class="btn small" href="contacto/" target="_blank" rel="noopener">Contacto</a>
              <a class="btn small" href="${REPO}" target="_blank" rel="noopener">Código (GitHub)</a>
@@ -124,25 +124,19 @@ G.SettingsUI = (() => {
     wire(box);
   }
 
-  function renderAccount(box) {
-    const st = G.DB.guest ? 'guest' : G.DB.syncState;
-    const SYNC = { ok: 'Guardado en la nube', syncing: 'Guardando…', pending: 'Pendiente de subir (se sube al salir del juego)',
-                   offline: 'Sin conexión: se subirá al volver', local: 'Guardado sólo en este navegador', guest: 'Invitado: no se guarda' };
-    if (G.DB.guest) {
-      box.innerHTML = section('Cuenta', 'Estás jugando como <b>invitado</b>: tu progreso no se guarda al salir.')
-        + `<button class="btn gold" id="set-login">Crear cuenta o entrar</button>`;
-      return;
-    }
-    const nick = G.Social.me ? G.Social.me.name : (G.DB.user || '');
-    const kind = G.DB.mode === 'local' ? 'Cuenta de este navegador' : G.DB.nameAccount ? 'Nombre y contraseña' : 'Google';
-    box.innerHTML = section('Cuenta')
-      + `<div class="set-row"><div class="grow"><b>Apodo</b><small>Es único y no se puede cambiar.</small></div><span class="gold" translate="no">${esc(nick)}</span></div>`
-      + `<div class="set-row"><div class="grow"><b>Tipo de cuenta</b></div><span>${esc(kind)}</span></div>`
-      + `<div class="set-row"><div class="grow"><b>Partida</b></div><span>${esc(SYNC[st] || st)}</span></div>`
-      + `<div class="row wrap" style="gap:8px;margin-top:12px">
-           <button class="btn" id="set-logout">Cerrar sesión</button>
-           <button class="btn danger" id="set-delete">Borrar cuenta</button>
-         </div><p class="note" id="set-msg"></p>`;
+  function renderSave(box) {
+    const s = G.DB.save;
+    box.innerHTML = section('Partida', 'Todo se guarda solo en este navegador: nada sale de tu dispositivo.')
+      + `<div class="set-row"><div class="grow"><b>Nombre</b><small>El nombre que aparece en tu partida.</small></div>
+           <input class="field" id="set-name" maxlength="16" value="${esc(s.name || '')}" style="max-width:160px"></div>`
+      + section('Copia de seguridad', 'Guarda tu partida en un archivo o recupérala de uno.')
+      + `<div class="row wrap" style="gap:8px">
+           <button class="btn gold" id="set-export">Exportar partida</button>
+           <button class="btn" id="set-import">Importar partida</button>
+           <input type="file" id="set-file" accept="application/json,.json" class="hidden">
+         </div><p class="note" id="set-msg"></p>`
+      + section('Empezar de cero', 'Borra tu partida de este navegador y empieza una nueva. No se puede deshacer.')
+      + `<div class="row wrap" style="gap:8px"><button class="btn danger" id="set-reset">Borrar partida y empezar de cero</button></div>`;
   }
 
   function wire(box) {
@@ -153,28 +147,53 @@ G.SettingsUI = (() => {
     const full = $('set-full'); if (full) full.onclick = toggleFull;
     const lay = $('set-layout'); if (lay) lay.onclick = () => G.LayoutUI.open();
     box.querySelectorAll('[data-lang]').forEach(b => { b.onclick = () => { if (b.dataset.lang !== G.I18n.lang) G.I18n.set(b.dataset.lang); }; });
-    const lo = $('set-login'); if (lo) lo.onclick = () => { close(); leave(); };
-    const out = $('set-logout'); if (out) out.onclick = () => { close(); leave(); };
-    const del = $('set-delete');
-    if (del) del.onclick = async () => {
-      const ok = await G.UI.confirmDelete();
-      if (!ok) return;
-      del.disabled = true;
-      const r = await G.DB.deleteAccount(ok.pass);
-      if (!r.ok) { $('set-msg').textContent = r.error; del.disabled = false; return; }
-      close();
-      G.UI.toast('Cuenta borrada');
-      G.Audio.music(null);
-      G.Flow.toLogin();
+    const name = $('set-name');
+    if (name) name.onchange = () => {
+      const v = name.value.trim().slice(0, 16);
+      G.DB.setName(v || 'Entrenador');
+      G.Audio.sfx('confirm');
+      render();
     };
-  }
-
-  /** Cerrar sesión (si estás en una partida, se abandona). */
-  function leave() {
-    if (G.DB.guest && !confirm('Eres invitado: se perderá todo el progreso. ¿Salir?')) return;
-    if (G.Game.state !== 'ui') G.Game.quit && G.Game.quit();
-    G.Audio.music(null);
-    G.DB.logout().then(() => G.Flow.toLogin());
+    const exp = $('set-export');
+    if (exp) exp.onclick = () => {
+      const blob = new Blob([G.DB.exportData()], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'pokesurvivor-partida.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      G.UI.toast('Partida exportada');
+    };
+    const imp = $('set-import'), file = $('set-file');
+    if (imp && file) {
+      imp.onclick = () => file.click();
+      file.onchange = () => {
+        const f = file.files && file.files[0];
+        if (!f) return;
+        const rd = new FileReader();
+        rd.onload = () => {
+          const r = G.DB.importData(String(rd.result));
+          if (!r.ok) { $('set-msg').textContent = r.error; return; }
+          G.UI.toast('Partida importada');
+          location.reload();
+        };
+        rd.readAsText(f);
+      };
+    }
+    const rst = $('set-reset');
+    if (rst) {
+      let armed = false;
+      rst.onclick = () => {
+        if (!armed) {
+          armed = true;
+          rst.textContent = 'Pulsa otra vez para confirmar';
+          return;
+        }
+        G.DB.reset();
+        G.Audio.sfx('confirm');
+        location.reload();
+      };
+    }
   }
 
   return { init, open, close, get isOpen() { return isOpen(); } };

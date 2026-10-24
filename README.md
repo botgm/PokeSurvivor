@@ -23,8 +23,7 @@ HTML + CSS + JavaScript vanilla sobre Canvas 2D. Sin build, sin dependencias y
 
 ## Jugar
 
-Doble clic en `index.html`. Crea una cuenta o entra como invitado, haz el test
-de personalidad y a la mazmorra.
+Doble clic en `index.html`. Haz el test de personalidad y a la mazmorra.
 
 | Tecla | Acción |
 |---|---|
@@ -37,7 +36,8 @@ de personalidad y a la mazmorra.
 para moverte (el joystick aparece donde tocas), toca un ataque de abajo para
 cambiarlo y el botón de arriba a la derecha para pausar. Se puede instalar como
 app ("Añadir a pantalla de inicio"). En **Ajustes** hay sonido, calidad gráfica
-(con modo automático), números de daño, menos sacudidas, FPS y la cuenta.
+(con modo automático), números de daño, menos sacudidas, FPS y la partida
+(exportar / importar).
 
 El Pokémon ataca solo con el movimiento activo (o con todos los de un
 **vínculo**: cada legendario vencido deja fusionar movimientos para lanzarlos a
@@ -54,9 +54,8 @@ Hay **tabla de tipos** (un Rayo Burbuja le quita más a un Charmander) y,
 de vez en cuando, **climas** (sol, lluvia, arena, nieve, niebla) que potencian
 unos tipos y debilitan otros.
 
-Cada día hay **misiones** (y semanales) que dan tickets y monedas; los
-**logros** dan medallas y títulos, y tu **perfil** enseña tus 3 Pokémon
-favoritos, tus marcas y tus medallas. En las runs encuentras **objetos** (Restos,
+Cada día hay **misiones** (y semanales) que dan tickets y monedas, y los
+**logros** dan medallas y títulos. En las runs encuentras **objetos** (Restos,
 Cinta Elección...) y tus movimientos **evolucionan** al máximo nivel. Los
 enemigos tienen personalidad: curan, ponen escudos, llaman a su manada o atacan
 con aviso en el suelo.
@@ -79,20 +78,15 @@ sitio, se pierde.
 En `videos/` hay grabaciones del juego (con su música): un combate contra un
 jefe, la captura de un shiny salvaje y un shiny en el gacha.
 
-## Guardado en la nube y publicación
+## Guardado y publicación
 
-- **Base de datos (Firebase):** cuentas con nombre + contraseña o Google, y la
-  partida se sigue en cualquier ordenador. Pasos en [docs/FIREBASE.md](docs/FIREBASE.md).
-  Sin configurar, el juego guarda sólo en el navegador, como antes.
-- **Jugar con amigos (hasta 4) y ranking:** con cuenta en la nube, menú
-  **Amigos** (añadir por apodo, invitar a tu sala) y **Ranking** (tiempo
-  aguantado: solo o grupo, de hoy a histórico, amigos, por Pokémon).
+- **El juego es 100% offline.** No hay cuentas, nube, amigos, salas,
+  cooperativo ni ranking. La partida se guarda sólo en el `localStorage` de
+  este navegador.
+- En **Ajustes → Partida** puedes **exportar** la partida a un archivo y
+  **importarla** de vuelta (para copia de seguridad o para pasarla a otro
+  navegador).
 - **Publicar gratis en GitHub Pages:** [docs/PUBLICAR.md](docs/PUBLICAR.md).
-- Si se juega en dos ordenadores a la vez o sin conexión, las partidas se
-  **fusionan**: las colecciones se unen (nunca se pierde un Pokémon ni un
-  shiny), mejoras y estadísticas se quedan con el máximo, y monedas y
-  compañero con la versión más reciente. Los cambios de otro ordenador llegan
-  en directo.
 
 ## Licencia
 
@@ -116,17 +110,15 @@ assets/pokemon/{dex}/   hojas de sprites PMD (Idle, Walk, Attack, Shoot, Charge,
 assets/pokemon/{dex}/s/ las mismas en versión shiny
 assets/fonts/           Pixelify Sans (OFL) y su versión con números redibujados (tools/make_font.py)
 js/
-  net/      social (apodo, amigos, salas), net (WebRTC + relé),
-            coop (partida en grupo), ranking
-  core/     util, db (guardado), audio (sintetizador + efectos), input,
+  core/     util, db (guardado local), audio (sintetizador + efectos), input,
             sprites (animador PMD), camera
   data/     pokedex*, sprites-meta*, moves, starters (+ test), enemies,
             upgrades, music (partituras)
   world/    tiles (pixel art en código), world (terreno, objetos, colisiones)
   entities/ player, enemy, projectile, pickup, fx
   systems/  combat, spawner, levelup, gacha
-  ui/       icons (pixel art), ui, hud, login, test, menu, gacha-ui, run-ui,
-            social-ui, ranking-ui
+  ui/       icons (pixel art), ui, hud, test, menu, gacha-ui, run-ui,
+            goals-ui, settings-ui
   game.js   flujo y bucle principal
 tools/      scripts que regeneran los ficheros marcados con *
 ```

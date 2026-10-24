@@ -1,21 +1,17 @@
 /* ============ rift.js — grietas y arena del legendario ============
  *
- * De vez en cuando (pocas veces por partida) se abre una GRIETA cerca de un
- * jugador. Dura GRIETA_TTL segundos; si entras, te lleva (con todo el grupo)
- * a una arena cerrada en el Mundo Distorsión, contra un Pokémon LEGENDARIO.
+ * De vez en cuando (pocas veces por partida) se abre una GRIETA cerca de ti.
+ * Dura GRIETA_TTL segundos; si entras, te lleva a una arena cerrada en el
+ * Mundo Distorsión, contra un Pokémon LEGENDARIO.
  *
- *   ganas    el legendario suelta tickets (el ×10, la mitad de las veces) y monedas, y cada uno se lleva un
+ *   ganas    el legendario suelta tickets (el ×10, la mitad de las veces) y monedas, y te llevas un
  *            VÍNCULO (fusiona movimientos, ver Player.fuse); a los pocos
- *            segundos volvéis al mapa donde estabais y se elige la fusión
- *   pierdes  (caéis todos o se acaba el tiempo) volvéis sin premio, con algo
- *            de vida; la partida sigue
+ *            segundos vuelves al mapa donde estabas y se elige la fusión
+ *   pierdes  (caes o se acaba el tiempo) vuelves sin premio, con algo de vida;
+ *            la partida sigue
  *
  * Mientras dura la arena, los enemigos del mapa se guardan (EnemyMgr.stash) y
  * no aparecen nuevos; al volver todo sigue como estaba.
- *
- * Cooperativo: lo decide el anfitrión. Mensajes (ver coop.js):
- *   'rift' x y ttl · 'riftx' · 'arena' cfg · 'aw' (ganada) · 'al' (perdida)
- *   y del invitado al anfitrión 're' (he entrado en la grieta).
  */
 G.Rift = (() => {
   // (0.14 hasta el 11-10-2026: más grietas para que se vean los vínculos)
@@ -27,7 +23,6 @@ G.Rift = (() => {
   let rift = null;          // { x, y, ttl, t }
   let arena = null;         // { tx, ty, r, dex, shiny, x, y, back, biome, t, phase, endT, bossId }
   let checkT = CHECK, asked = false, downT = 0, misses = 0;
-  const authority = () => !G.Coop.active || G.Coop.isHost;
   const TS = () => G.Tiles.T * G.Sprites.PX;
 
   function reset() { rift = null; arena = null; checkT = CHECK; asked = false; downT = 0; misses = 0; }
@@ -40,7 +35,7 @@ G.Rift = (() => {
       rift.ttl -= dt;
       if (rift.ttl <= 0) { rift = null; return; }
       if (!arena && !pl.dead && G.U.dist2(pl.x, pl.y, rift.x, rift.y - 10) < 30 * 30) enter();
-    } else if (!arena && authority() && time > FROM && time < G.Judgment.AT - 120) {
+    } else if (!arena && time > FROM && time < G.Judgment.AT - 120) {
       checkT -= dt;
       if (checkT <= 0) {
         checkT = CHECK;
@@ -60,12 +55,11 @@ G.Rift = (() => {
       const x = near.x + Math.cos(a) * d, y = near.y + Math.sin(a) * d * 0.85;
       if (!G.World.isFree(x, y, 22)) continue;
       show(x, y, TTL);
-      if (G.Coop.isHost) G.Coop.broadcast(['rift', Math.round(x), Math.round(y), TTL]);
       return;
     }
   }
 
-  /** Aparece la grieta (también la que manda el anfitrión). */
+  /** Aparece la grieta. */
   function show(x, y, ttl) {
     rift = { x, y, ttl, t: 0 };
     asked = false;
@@ -77,13 +71,12 @@ G.Rift = (() => {
   function enter() {
     if (asked) return;
     asked = true;
-    if (authority()) start();
-    else G.Coop.toHost(['re']);
+    start();
   }
 
   // ---------------- arena ----------------
 
-  /** Quien manda: elige legendario y lugar, y avisa a todos. */
+  /** Elige legendario y lugar. */
   let nextType = null;          // pruebas/vídeos: tipo de la próxima arena
 
   function start(forceType) {
@@ -103,12 +96,11 @@ G.Rift = (() => {
       // La arena es la de uno de sus tipos, al azar.
       type: forceType || G.U.pick(mon.types)
     };
-    if (G.Coop.isHost) G.Coop.broadcast(['arena', cfg]);
     begin(cfg);
     spawnLegend();
   }
 
-  /** En cada ordenador: viaje a la arena. */
+  /** Viaje a la arena. */
   function begin(cfg) {
     const pl = G.Game.player;
     const ts = TS();
@@ -117,7 +109,7 @@ G.Rift = (() => {
       back: { x: pl.x, y: pl.y }, biome: G.World.biome, t: 0, phase: 'fight', endT: 0, bossId: 0
     });
     rift = null; asked = false; downT = 0;
-    if (authority()) G.EnemyMgr.stash(); else G.EnemyMgr.clearRemote();
+    G.EnemyMgr.stash();
     G.Projectiles.clear();
     G.Combat.clearFields();
     G.Hazards.clear();
@@ -138,11 +130,10 @@ G.Rift = (() => {
   function spawnLegend() {
     const mon = G.DEX_BY[arena.dex];
     const t = G.Game.st.time;
-    const n = G.Game.everyone().length;
     const ts = TS();
     const def = {
       dex: mon.dex, name: mon.name,
-      hp: Math.round((3200 + t * 9) * G.Coop.scaleHp(n) * (n > 1 ? 1.4 : 1)),
+      hp: Math.round(3200 + t * 9),
       spd: Math.round(G.U.clamp(48 + (mon.spd - 78) * 0.6, 48, 105)),
       dmg: Math.round(36 + t / 20), xp: Math.round(500 + t * 1.2),
       behavior: mon.types.some(x => ['psychic', 'electric', 'ghost', 'fairy', 'fire', 'water', 'ice', 'dragon'].includes(x)) ? 'ranged' : 'charger',
@@ -165,7 +156,6 @@ G.Rift = (() => {
   function keepInside() {
     const ts = TS(), max = (arena.r - 1.4) * ts;
     for (const e of G.EnemyMgr.all()) {
-      if (e.remote) continue;
       const dx = e.x - arena.x, dy = e.y - arena.y, d = Math.hypot(dx, dy);
       if (d > max) { e.x = arena.x + dx / d * max; e.y = arena.y + dy / d * max; }
     }
@@ -174,13 +164,12 @@ G.Rift = (() => {
   function arenaTick(dt, pl) {
     arena.t += dt;
     if (arena.phase === 'fight') {
-      if (!authority()) return;
       keepInside();
       const boss = G.EnemyMgr.get(arena.bossId);
-      if (!boss || boss.dead) { G.Coop.isHost && G.Coop.broadcast(['aw']); won(); return; }
+      if (!boss || boss.dead) { won(); return; }
       const allDown = G.Game.everyone().every(p => p.dead);
       downT = allDown ? downT + dt : 0;
-      if (downT > 1.4 || arena.t > ARENA_TIME) { G.Coop.isHost && G.Coop.broadcast(['al']); lost(); }
+      if (downT > 1.4 || arena.t > ARENA_TIME) lost();
       return;
     }
     arena.endT -= dt;
@@ -209,18 +198,14 @@ G.Rift = (() => {
     G.Audio.sfx('back');
   }
 
-  /** En cada ordenador: vuelta al mapa. */
+  /** Vuelta al mapa. */
   function finish() {
     const pl = G.Game.player;
     const a = arena;
     arena = null;
     G.World.setBiome(a.biome, true);
     G.Weather.clear();
-    // Invitado: no se borra nada. El anfitrión avisa de los de la arena que se
-    // van y de los del mapa que vuelven; si el invitado terminaba su cuenta
-    // atrás un poco más tarde (pasa casi siempre), borraba los que acababan de
-    // volver y no se veían hasta que caían (sólo sus ataques).
-    if (authority()) G.EnemyMgr.restore();
+    G.EnemyMgr.restore();
     G.Projectiles.clear();
     G.Combat.clearFields();
     G.Hazards.clear();
@@ -256,20 +241,8 @@ G.Rift = (() => {
     };
   }
 
-  // ---------------- red ----------------
-
-  function onEvent(ev) {
-    switch (ev[0]) {
-      case 'rift': show(ev[1], ev[2], ev[3]); break;
-      case 'riftx': rift = null; break;
-      case 'arena': begin(ev[1]); break;
-      case 'aw': won(); break;
-      case 'al': lost(); break;
-    }
-  }
-
   return {
-    reset, update, drawable, onEvent, enterRequest() { if (!arena) start(); },
+    reset, update, drawable,
     get rift() { return rift; }, get arena() { return arena; },
     get inArena() { return !!arena; },
     get timeLeft() { return arena ? Math.max(0, ARENA_TIME - arena.t) : 0; },

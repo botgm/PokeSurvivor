@@ -18,7 +18,7 @@ G.AchDefs = (() => {
 
   const LIST = [
     // ---------- colección ----------
-    { id: 'own1', cat: 'coleccion', tier: 1, name: 'Primer compañero', desc: 'Ten 1 Pokémon.', value: own, goal: 1, reward: { coins: 100 } },
+    { id: 'own1', cat: 'coleccion', tier: 1, name: 'Primer compañero', desc: 'Ten 1 Pokémon.', value: own, goal: 1, reward: {} },
     { id: 'own10', cat: 'coleccion', tier: 1, name: 'Pequeño equipo', desc: 'Ten 10 Pokémon.', value: own, goal: 10, reward: { t1: 2 } },
     { id: 'own50', cat: 'coleccion', tier: 2, name: 'Coleccionista', desc: 'Ten 50 Pokémon.', value: own, goal: 50, reward: { t1: 5 }, title: 'Coleccionista' },
     { id: 'own100', cat: 'coleccion', tier: 2, name: 'Cien amigos', desc: 'Ten 100 Pokémon.', value: own, goal: 100, reward: { t10: 1 } },

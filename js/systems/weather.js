@@ -11,8 +11,6 @@
  *
  * Cada bioma tiene sus climas más probables (el volcán, sol y arena...).
  * Lo visual es suave a propósito: un tinte leve y pocas partículas.
- *
- * Cooperativo: lo decide el anfitrión y lo manda con 'wx'.
  */
 G.Weather = (() => {
   const KINDS = {
@@ -39,7 +37,6 @@ G.Weather = (() => {
   let cur = null;           // { kind, t, dur }
   let checkT = CHECK, chipT = 0;
   let parts = [];
-  const authority = () => !G.Coop.active || G.Coop.isHost;
 
   function reset() { cur = null; checkT = CHECK; chipT = 0; parts = []; }
 
@@ -93,14 +90,13 @@ G.Weather = (() => {
     if (cur) {
       cur.t += dt;
       if (cur.t >= cur.dur) cur = null;
-    } else if (authority() && time > FROM && !G.Rift.inArena && !G.Judgment.active) {
+    } else if (time > FROM && !G.Rift.inArena && !G.Judgment.active) {
       checkT -= dt;
       if (checkT <= 0) {
         checkT = CHECK;
         if (Math.random() < CHANCE) {
           const kind = pick(G.World.biome), dur = Math.round(G.U.rand(55, 75));
           start(kind, dur);
-          if (G.Coop.isHost) G.Coop.broadcast(['wx', kind, dur]);
         }
       }
     }
@@ -115,9 +111,9 @@ G.Weather = (() => {
           G.FX.dmgText(pl.x, pl.y - pl.bodyH - 4, '-' + Math.round(d), def().color);
         }
       }
-      if (authority() && cur && def().safe && level() > 0.5) {
+      if (cur && def().safe && level() > 0.5) {
         for (const e of G.EnemyMgr.all()) {
-          if (e.dead || e.remote || e.boss) continue;
+          if (e.dead || e.boss) continue;
           if (!hurts(e.types || [])) continue;
           e.hp -= e.maxHp * 0.02 + 1;
           e.flash = 0.05;
@@ -126,9 +122,6 @@ G.Weather = (() => {
       }
     }
   }
-
-  /** Cooperativo: el anfitrión manda el clima. */
-  function onEvent(ev) { if (ev[1]) start(ev[1], ev[2]); else stop(); }
 
   // ---------------- dibujo (en pantalla) ----------------
 
@@ -169,13 +162,13 @@ G.Weather = (() => {
   }
 
   return {
-    KINDS, reset, update, draw, mult, speedFor, hurts, onEvent,
+    KINDS, reset, update, draw, mult, speedFor, hurts,
     get current() { return cur && level() > 0 ? Object.assign({ left: Math.max(0, cur.dur - cur.t) }, cur, KINDS[cur.kind]) : null; },
     get vignette() { return cur && cur.kind === 'fog' ? level() : 0; },
-    /** Pone un clima ya (la arena de la grieta; no se manda: cada uno lo pone). */
+    /** Pone un clima ya (la arena de la grieta). */
     force(kind, dur) { start(kind, dur); },
     /** Quita el clima de golpe (al salir de la arena). */
     clear() { cur = null; parts.length = 0; },
-    debugStart(kind = 'rain', dur = 60) { start(kind, dur); if (G.Coop.isHost) G.Coop.broadcast(['wx', kind, dur]); }
+    debugStart(kind = 'rain', dur = 60) { start(kind, dur); }
   };
 })();

@@ -1,14 +1,11 @@
-/* ============ goals-ui.js — misiones, logros y perfil ============
- * Una pantalla con tres pestañas:
+/* ============ goals-ui.js — misiones y logros ============
+ * Una pantalla con dos pestañas:
  *   Misiones  3 diarias + 2 semanales, con barra, premio y botón de recoger
  *   Logros    medallas por categoría; los legendarios, uno a uno con su sprite
- *   Perfil    tus 3 favoritos y tu título; vista previa del perfil público
- * y la ventana del perfil público de cualquier jugador (G.ProfileUI.show).
  */
 (() => {
   const $ = G.UI.$;
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmt = t => (t >= 3600 ? Math.floor(t / 3600) + ':' + G.U.mmss(t % 3600).padStart(5, '0') : G.U.mmss(t));
 
   // ======================= PANTALLA =======================
 
@@ -35,7 +32,6 @@
       box.innerHTML = '';
       if (tab === 'missions') missions(box);
       else if (tab === 'ach') achievements(box);
-      else profile(box);
     }
 
     // ---------------- misiones ----------------
@@ -144,150 +140,6 @@
       return el;
     }
 
-    // ---------------- perfil (editar) ----------------
-
-    function profile(box) {
-      const s = G.DB.save;
-      s.profile = s.profile || { favs: [], title: '' };
-      const P = s.profile;
-      box.insertAdjacentHTML('beforeend', `<p class="sub">${G.DB.online ? 'Así te ven los demás jugadores (desde el ranking y la lista de amigos).'
-        : 'Tu perfil se publica cuando juegas con una cuenta online.'}</p>
-        <h3>Tus 3 Pokémon favoritos</h3>`);
-      const favs = document.createElement('div');
-      favs.className = 'fav-slots';
-      for (let i = 0; i < 3; i++) {
-        const f = P.favs[i];
-        const slot = document.createElement('div');
-        slot.className = 'fav-slot';
-        if (f && G.DEX_BY[f.dex]) {
-          slot.appendChild(G.UI.spriteCanvas(f.dex, 120, 100, { scale: 2, lively: true, shiny: !!f.shiny }));
-          slot.insertAdjacentHTML('beforeend', `<b>${f.shiny ? G.Icons.html('shiny', 12) + ' ' : ''}${esc(G.DEX_BY[f.dex].name)}</b>`);
-        } else slot.innerHTML = '<span>Elegir</span>';
-        slot.onclick = () => pickFav(i);
-        favs.appendChild(slot);
-      }
-      box.appendChild(favs);
-
-      const titles = G.Progress.titles();
-      box.insertAdjacentHTML('beforeend', `<h3 style="margin-top:14px">Título</h3>`);
-      const sel = document.createElement('select');
-      sel.className = 'field';
-      sel.style.maxWidth = '320px';
-      sel.innerHTML = `<option value="">(sin título)</option>` + titles.map(t => `<option ${t === P.title ? 'selected' : ''}>${esc(t)}</option>`).join('');
-      sel.onchange = () => { P.title = sel.value; save(); };
-      box.appendChild(sel);
-      if (!titles.length) box.insertAdjacentHTML('beforeend', '<p class="note">Consigue logros para desbloquear títulos.</p>');
-
-      const prev = document.createElement('button');
-      prev.className = 'btn gold'; prev.style.marginTop = '16px';
-      prev.textContent = 'Ver mi perfil público';
-      prev.onclick = () => G.ProfileUI.showData(G.Social.profileData());
-      box.appendChild(prev);
-    }
-
-    function pickFav(i) {
-      const s = G.DB.save;
-      const box = $('goals-body');
-      box.innerHTML = `<div class="row between"><h3>Elige el favorito ${i + 1}</h3>
-        <button class="btn small ghost" id="fav-back">Volver</button></div>
-        <input class="field" id="fav-q" placeholder="Buscar por nombre" style="max-width:320px;margin:6px 0 10px">
-        <div class="grid" id="fav-grid"></div>`;
-      $('fav-back').onclick = () => { tab = 'profile'; render(); };
-      const fill = q => {
-        const g = $('fav-grid');
-        g.innerHTML = '';
-        const mons = Object.keys(s.owned).map(Number).filter(d => G.DEX_BY[d] && (!q || G.DEX_BY[d].name.toLowerCase().includes(q)));
-        for (const d of mons.slice(0, 120)) {
-          for (const shiny of G.DB.ownsShiny(d) ? [false, true] : [false]) {
-            const c = document.createElement('div');
-            c.className = 'cell';
-            c.appendChild(G.UI.spriteCanvas(d, 92, 80, { scale: 2, shiny }));
-            c.insertAdjacentHTML('beforeend', `<b>${shiny ? G.Icons.html('shiny', 12) + ' ' : ''}${esc(G.DEX_BY[d].name)}</b>`);
-            c.onclick = () => {
-              s.profile.favs = (s.profile.favs || []).slice();
-              s.profile.favs[i] = { dex: d, shiny };
-              s.profile.favs = s.profile.favs.filter(Boolean).slice(0, 3);
-              save(); tab = 'profile'; render();
-            };
-            g.appendChild(c);
-          }
-        }
-      };
-      $('fav-q').oninput = () => fill($('fav-q').value.trim().toLowerCase());
-      fill('');
-    }
-
-    function save() {
-      G.DB.commit();
-      if (G.Social.me) G.Social.publishProfile(true);
-      G.Audio.sfx('confirm');
-    }
-
     return { init, open, render };
-  })();
-
-  // ======================= PERFIL PÚBLICO =======================
-
-  G.ProfileUI = (() => {
-    function init() {
-      $('prof-close').onclick = close;
-      $('scr-profile').onclick = e => { if (e.target.id === 'scr-profile') close(); };
-    }
-    function close() { $('scr-profile').classList.add('hidden'); }
-
-    /** Abre el perfil de otro jugador por su uid. */
-    async function show(uid) {
-      if (!uid) return;
-      if (uid === G.Social.uid) { showData(G.Social.profileData()); return; }
-      $('prof-body').innerHTML = '<p class="sub">Cargando…</p>';
-      $('scr-profile').classList.remove('hidden');
-      const d = await G.Social.getProfile(uid);
-      if (!d) { $('prof-body').innerHTML = '<p class="sub">Este jugador aún no tiene perfil.</p>'; return; }
-      showData(d);
-    }
-
-    function showData(d) {
-      const b = d.best || {};
-      const body = $('prof-body');
-      body.innerHTML = `
-        <div class="prof-head"><h2 translate="no">${esc(d.name || '???')}</h2>${d.title ? `<span class="prof-title">${esc(d.title)}</span>` : ''}</div>
-        <div class="fav-slots view" id="prof-favs"></div>
-        <div class="prof-marks">
-          <div><span>Mejor tiempo</span><b>${fmt(b.solo || 0)}</b></div>
-          <div><span>En grupo</span><b>${fmt(b.group || 0)}</b></div>
-          <div><span>Nivel máximo</span><b>${b.level || 0}</b></div>
-          <div><span>Jefes</span><b>${(b.bosses || 0).toLocaleString('es')}</b></div>
-          <div><span>Legendarios</span><b>${b.legends || 0}</b></div>
-          <div><span>Derrotados</span><b>${(b.kills || 0).toLocaleString('es')}</b></div>
-        </div>
-        <h3>Medallas <span class="sub">${b.medals || 0}</span></h3>
-        <div class="prof-medals" id="prof-medals"></div>`;
-      const favs = $('prof-favs');
-      for (const f of (d.favs || []).slice(0, 3)) {
-        if (!G.DEX_BY[f.dex]) continue;
-        const slot = document.createElement('div');
-        slot.className = 'fav-slot';
-        slot.appendChild(G.UI.spriteCanvas(f.dex, 120, 100, { scale: 2, lively: true, shiny: !!f.shiny }));
-        slot.insertAdjacentHTML('beforeend', `<b>${f.shiny ? G.Icons.html('shiny', 12) + ' ' : ''}${esc(G.DEX_BY[f.dex].name)}</b>`);
-        favs.appendChild(slot);
-      }
-      if (!favs.children.length) favs.innerHTML = '<p class="sub">Sin favoritos todavía.</p>';
-      const med = $('prof-medals');
-      for (const id of d.medals || []) {
-        const a = G.AchDefs.BY[id];
-        if (!a) continue;
-        const m = document.createElement('div');
-        m.className = 'pm';
-        m.title = a.name;
-        if (a.dex) m.appendChild(G.UI.spriteCanvas(a.dex, 48, 40, { scale: 1 }));
-        else m.innerHTML = G.Icons.html('medal' + a.tier, 36);
-        m.insertAdjacentHTML('beforeend', `<small>${esc(a.name)}</small>`);
-        med.appendChild(m);
-      }
-      if (!med.children.length) med.innerHTML = '<p class="sub">Aún sin medallas.</p>';
-      $('scr-profile').classList.remove('hidden');
-    }
-
-    return { init, show, showData };
   })();
 })();

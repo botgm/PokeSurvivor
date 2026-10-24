@@ -2,10 +2,6 @@
  * Los orbes se quedan quietos hasta que entras en el radio del imán; entonces
  * aceleran hacia ti. Para que no se acumulen miles, al pasar de MAX se fusionan
  * los más antiguos.
- *
- * Cooperativo: los objetos los crea el anfitrión (cada uno con su id) y los
- * demás reciben una copia. Todos vuelan hacia el jugador más cercano; quien
- * decide quién lo ha cogido es el anfitrión.
  */
 G.Pickups = (() => {
   let list = [];
@@ -32,11 +28,8 @@ G.Pickups = (() => {
   function all() { return list; }
 
   function push(o) {
-    // En cooperativo sólo el anfitrión crea objetos (las copias llegan por la red).
-    if (G.Coop.active && !G.Coop.isHost) return;
     o.id = nextId++;
     list.push(o);
-    if (G.Coop.isHost) G.Coop.pickupAdded(o);
     if (list.length > MAX) {
       // Fusiona los dos más antiguos de XP para no crecer sin límite.
       const i = list.findIndex(p => p.kind === 'xp' || p.kind === 'xpBig');
@@ -44,26 +37,10 @@ G.Pickups = (() => {
         const a = list.splice(i, 1)[0];
         const j = list.findIndex(p => p.kind === 'xp' || p.kind === 'xpBig');
         if (j >= 0) { list[j].value += a.value; list[j].kind = 'xpBig'; }
-        if (G.Coop.isHost) G.Coop.pickupGone(a.id);
       } else {
-        const a = list.shift();
-        if (G.Coop.isHost) G.Coop.pickupGone(a.id);
+        list.shift();
       }
     }
-  }
-
-  /** Copia de un objeto del anfitrión. */
-  function addRemote(id, kind, x, y, value) {
-    if (list.some(p => p.id === id)) return;
-    const o = orb(kind, x, y, value);
-    o.id = id;
-    list.push(o);
-  }
-
-  function removeId(id) {
-    const i = list.findIndex(p => p.id === id);
-    if (i < 0) return null;
-    return list.splice(i, 1)[0];
   }
 
   /** Imán: todo vuela hacia el jugador más cercano. */
@@ -110,7 +87,7 @@ G.Pickups = (() => {
   }
 
   /**
-   * @param players  un jugador o la lista de jugadores (los caídos no recogen)
+   * @param players  un jugador o la lista de jugadores
    * @param onCollect(pickup, jugador)
    */
   function update(dt, players, onCollect) {
@@ -200,5 +177,5 @@ G.Pickups = (() => {
     ctx.globalAlpha = 1;
   }
 
-  return { clear, all, dropXp, drop, update, draw, addRemote, removeId, pullAll, KIND, get count() { return list.length; } };
+  return { clear, all, dropXp, drop, update, draw, pullAll, KIND, get count() { return list.length; } };
 })();

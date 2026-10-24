@@ -16,12 +16,16 @@ const sandbox = {
 sandbox.window = sandbox;
 vm.createContext(sandbox);
 const load = f => vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
-const EN = {};
+const EN = {}, VI = {};
 for (const f of ['js/core/util.js', 'js/core/i18n.js']) load(f);
-// Captura el diccionario inglés (clave en español).
+// Captura los diccionarios por idioma (clave en español).
 const add = G.I18n.add;
-G.I18n.add = d => { Object.assign(EN, d); add(d); };
-for (const f of ['js/data/lang-en.js', 'js/core/settings.js', 'js/data/pokedex.js', 'js/data/sprites-meta.js', 'js/data/moves.js', 'js/data/types.js',
+G.I18n.add = (a, b) => {
+  if (typeof a === 'string') Object.assign(a === 'vi' ? VI : EN, b || {});
+  else Object.assign(EN, a || {});
+  add(a, b);
+};
+for (const f of ['js/data/lang-en.js', 'js/data/lang-vi.js', 'js/core/settings.js', 'js/data/pokedex.js', 'js/data/sprites-meta.js', 'js/data/moves.js', 'js/data/types.js',
                  'js/data/items.js', 'js/data/achievements.js', 'js/world/tiles.js', 'js/data/funding.js']) {
   try { load(f); } catch (e) { console.warn('aviso', f, e.message); }
 }
@@ -45,10 +49,11 @@ const out = {
   // (Sin la arena de Arceus: las de las grietas son una por tipo.)
   arenas: Object.fromEntries(Object.entries(G.ARENA_THEMES || (G.Tiles && G.Tiles.ARENA_THEMES) || {}).filter(([k]) => k !== 'judgment').map(([k, v]) => [k, v.name])),
   funding: { kofi: G.Funding.kofi, sponsors: G.Funding.sponsors, costs: G.Funding.costs },
-  en: EN
+  en: EN,
+  vi: VI
 };
 fs.mkdirSync(path.join(__dirname, 'cache'), { recursive: true });
 fs.writeFileSync(path.join(__dirname, 'cache', 'gamedata.json'), JSON.stringify(out));
 console.log('ok:', out.dex.length, 'Pokémon,', out.moves.length, 'movimientos,', out.items.length, 'objetos,', out.achievements.length, 'logros,',
-  Object.keys(out.arenas).length, 'arenas,', Object.keys(out.en).length, 'traducciones');
+  Object.keys(out.arenas).length, 'arenas,', Object.keys(out.en).length, 'traducciones en,', Object.keys(out.vi).length, 'en vi');
 

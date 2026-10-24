@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <base href="../">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>PokéSurvivor – Free online Pokémon survival game (Survivor.io style)</title>
-<meta name="description" content="Survive hordes of Pokémon with your partner in this free fan game for browser and mobile: 966 Pokémon, shinies, legendaries and online co-op with friends. No downloads, no ads.">
+<title>PokéSurvivor – Free Pokémon survival game (Survivor.io style)</title>
+<meta name="description" content="Survive hordes of Pokémon with your partner in this free fan game for browser and mobile: 966 Pokémon, shinies and legendaries. No downloads, no ads.">
 <link rel="canonical" href="https://pokesurvivor.com/en/">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="theme-color" content="#0a1430">
@@ -16,14 +16,14 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:url" content="https://pokesurvivor.com/en/">
 <meta property="og:title" content="PokéSurvivor – Survive the Pokémon hordes">
-<meta property="og:description" content="A free fan game for browser and mobile: 966 Pokémon, shinies, legendaries and co-op with up to 4 friends. No downloads, no ads.">
+<meta property="og:description" content="A free fan game for browser and mobile: 966 Pokémon, shinies and legendaries. No downloads, no ads.">
 <meta property="og:image" content="https://pokesurvivor.com/assets/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="PokéSurvivor: un Pokémon rodeado de hordas en un mapa pixel art">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="PokéSurvivor – Survive the Pokémon hordes">
-<meta name="twitter:description" content="A free fan game for browser and mobile, with co-op for up to 4. No downloads, no ads.">
+<meta name="twitter:description" content="A free fan game for browser and mobile. No downloads, no ads.">
 <meta name="twitter:image" content="https://pokesurvivor.com/assets/og-image.jpg">
 <script>window.PS_PAGES = true;</script>
 <link rel="manifest" href="manifest.webmanifest">
@@ -37,7 +37,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="PokéSurvivor">
-<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="preload" href="assets/fonts/PixelifyPS-400.ttf" as="font" type="font/ttf" crossorigin>
 <link rel="preload" href="assets/fonts/PixelifyPS-700.ttf" as="font" type="font/ttf" crossorigin>
 <!-- Datos estructurados para Google (tipo de página: videojuego gratuito) -->
@@ -50,22 +49,22 @@
       "@id": "https://pokesurvivor.com/#web",
       "url": "https://pokesurvivor.com/",
       "name": "PokéSurvivor",
-      "inLanguage": ["es", "en"]
+      "inLanguage": ["es", "en", "vi"]
     },
     {
       "@type": ["VideoGame", "WebApplication"],
       "@id": "https://pokesurvivor.com/#juego",
       "name": "PokéSurvivor",
       "url": "https://pokesurvivor.com/",
-      "description": "A free Pokémon survival fan game (bullet heaven, Survivor.io style): pick a partner, survive the hordes, level up, evolve your moves, fight legendaries in rifts and play co-op with up to 4 friends.",
+      "description": "A free Pokémon survival fan game (bullet heaven, Survivor.io style): pick a partner, survive the hordes, level up, evolve your moves and fight legendaries in rifts. A single-player, offline game.",
       "image": "https://pokesurvivor.com/assets/og-image.jpg",
-      "inLanguage": ["es", "en"],
+      "inLanguage": ["es", "en", "vi"],
       "genre": ["Roguelike", "Bullet heaven", "Acción", "Supervivencia"],
       "gamePlatform": ["Navegador web", "PC", "Android", "iOS"],
       "applicationCategory": "GameApplication",
       "operatingSystem": "Cualquiera con navegador web moderno",
-      "playMode": ["SinglePlayer", "CoOp", "MultiPlayer"],
-      "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 4 },
+      "playMode": ["SinglePlayer"],
+      "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 1 },
       "isAccessibleForFree": true,
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" },
       "isPartOf": { "@id": "https://pokesurvivor.com/#web" }
@@ -80,43 +79,6 @@
 <canvas id="game"></canvas>
 <!-- En móvil se juega en horizontal -->
 <div id="rotate" class="hidden"><div class="box center"><div id="rotate-ico"></div><h2>Gira el móvil</h2><p class="sub">PokéSurvivor se juega en horizontal.</p></div></div>
-
-<!-- ====== Inicio: login / registro / invitado ====== -->
-<section id="scr-login" class="scr hidden">
-  <div class="box" style="width:min(420px,100%)">
-    <div class="logo">
-      <div class="t1">PokéSurvivor</div>
-      <div class="t2">Mundo Misterioso</div>
-    </div>
-    <p class="login-tag">Sobrevive a las hordas con tu compañero Pokémon · gratis, en PC y móvil</p>
-    <p class="login-official">Web oficial: pokesurvivor.com · si alguien te pide pagar, no somos nosotros</p>
-    <div class="tabs">
-      <div class="tab on" data-tab="login">Entrar</div>
-      <div class="tab" data-tab="register">Crear cuenta</div>
-    </div>
-    <form id="login-form" autocomplete="off">
-      <label for="f-user">Nombre</label>
-      <input id="f-user" class="field" maxlength="16" spellcheck="false">
-      <label for="f-pass">Contraseña</label>
-      <input id="f-pass" class="field" type="password" maxlength="64">
-      <p id="login-err" class="err"></p>
-      <p class="note"><a href="#" id="f-forgot">¿Olvidaste tu contraseña?</a></p>
-      <p id="forgot-note" class="note hidden">Si vinculaste tu Gmail, pulsa <b>Entrar con Google</b> con ese Gmail: es tu misma cuenta.
-        Si no lo vinculaste, no se puede recuperar: crea una cuenta nueva (y esta vez vincula tu Gmail desde el aviso que sale al entrar).</p>
-      <div class="row">
-        <button id="btn-auth" class="btn gold grow" type="submit">Entrar</button>
-      </div>
-    </form>
-    <div class="row" style="margin-top:10px">
-      <button id="btn-google" class="btn google grow hidden" type="button">Entrar con Google</button>
-    </div>
-    <div class="row" style="margin-top:10px">
-      <button id="btn-guest" class="btn ghost grow" type="button">Jugar como invitado</button>
-    </div>
-    <p class="note center" id="login-mode"></p>
-    <p class="note center"><a href="en/guide/">Guía</a> · <a href="en/pokedex/">Pokédex</a> · <a href="#" class="legal-link" data-legal>Aviso legal y privacidad</a></p>
-  </div>
-</section>
 
 <!-- ====== Test de personalidad ====== -->
 <section id="scr-test" class="scr dim hidden">
@@ -178,10 +140,8 @@
         <button class="menu-item" data-go="dex">Pokémon<small id="menu-dex-count">Tu colección</small></button>
         <button class="menu-item" data-go="upgrades">Mejoras<small>Haz más fuerte cada run</small></button>
         <button class="menu-item" data-go="gacha">Gacha<small>9 regiones · Pokémon y shinies</small></button>
-        <button class="menu-item" data-go="goals">Misiones<small id="menu-goals-sub">Misiones, logros y perfil</small></button>
-        <button class="menu-item" data-go="friends">Amigos<small id="menu-friends-sub">Juega en grupo, hasta 4</small></button>
-        <button class="menu-item" data-go="rank">Ranking<small>Quién aguanta más</small></button>
-        <button class="menu-item" data-go="settings">Ajustes<small>Sonido, gráficos, controles y cuenta</small></button>
+        <button class="menu-item" data-go="goals">Misiones<small id="menu-goals-sub">Misiones y logros</small></button>
+        <button class="menu-item" data-go="settings">Ajustes<small>Sonido, gráficos, controles y partida</small></button>
       </div>
     </div>
     <div class="box" style="padding:14px 18px">
@@ -199,7 +159,6 @@
   <button id="btn-sound" class="btn small ghost" title="Sonido"></button>
   <button id="btn-full" class="btn small ghost hidden" title="Pantalla completa"></button>
   <button id="btn-settings" class="btn small ghost" title="Ajustes"></button>
-  <button id="btn-logout" class="btn small ghost">Salir</button>
 </div>
 <div id="sound-panel" class="box sound-panel hidden"></div>
 <div id="credits-line" class="credits-line hidden">Proyecto de fan sin ánimo de lucro · Sprites: SpriteCollab (CC BY-NC 4.0) · Pokémon © Nintendo/Creatures/GAME FREAK · <a href="#" class="legal-link" data-legal>Aviso legal</a></div>
@@ -209,20 +168,6 @@
   <div class="box news-box">
     <div class="row between"><h2>Novedades</h2><button class="btn small ghost" id="news-close">Cerrar</button></div>
     <div id="news-body" class="news-body"></div>
-  </div>
-</section>
-
-<!-- ====== Vincular Gmail para recuperar la cuenta (js/ui/login.js, offerRecovery) ====== -->
-<section id="scr-recover" class="scr dim hidden">
-  <div class="box" style="width:min(440px,100%)">
-    <h2>¿Te da miedo perder tu cuenta?</h2>
-    <p>Vincula tu Gmail: si un día olvidas la contraseña, pulsas <b>Entrar con Google</b> y es tu misma cuenta, con todo lo tuyo.</p>
-    <p class="err" id="rec-err"></p>
-    <div class="row" style="gap:8px;flex-wrap:wrap">
-      <button class="btn gold grow" id="rec-link" type="button">Vincular mi Gmail</button>
-      <button class="btn ghost" id="rec-later" type="button">Ahora no</button>
-    </div>
-    <p class="note center"><a href="#" id="rec-never">No volver a preguntar</a></p>
   </div>
 </section>
 
@@ -242,7 +187,7 @@
       <button class="gen-tab" data-t="sound">Sonido</button>
       <button class="gen-tab" data-t="gfx">Gráficos</button>
       <button class="gen-tab" data-t="ctl">Controles</button>
-      <button class="gen-tab" data-t="acc">Cuenta</button>
+      <button class="gen-tab" data-t="save">Partida</button>
       <button class="gen-tab" data-t="about">Acerca de</button>
     </div>
     <div id="set-body" class="set-body"></div>
@@ -255,7 +200,7 @@
     <div class="row between"><h2>Aviso legal</h2><button class="btn small ghost" id="legal-close">Cerrar</button></div>
     <h3>Proyecto de fan</h3>
     <p><b>PokéSurvivor</b> es un juego hecho por fans, <b>gratuito y sin ánimo de lucro</b>.
-      No tiene anuncios ni compras. Se puede apoyar con donaciones voluntarias, que se usan sólo para pagar los servidores y el dominio, y que no dan ninguna ventaja en el juego.</p>
+      No tiene anuncios ni compras. Se puede apoyar con donaciones voluntarias, que se usan sólo para pagar el dominio y la web, y que no dan ninguna ventaja en el juego.</p>
     <p>No está afiliado, patrocinado ni aprobado por Nintendo, Creatures Inc., GAME FREAK ni
       The Pokémon Company. Pokémon y todos los nombres y personajes relacionados son marcas y
       propiedad de sus respectivos dueños.</p>
@@ -274,23 +219,12 @@
     <p>Código fuente: <a id="legal-repo" href="#" target="_blank" rel="noopener"></a></p>
     <p>Licencia del código: PolyForm Noncommercial 1.0.0 (se puede usar, estudiar y modificar, pero no para ganar dinero). Las versiones hasta el 14-10-2026 siguen bajo MIT.</p>
     <h3>Privacidad</h3>
-    <p>Si creas una cuenta, guardamos tu nombre de jugador y tu partida (colección, monedas,
-      mejoras y estadísticas) en Google Firebase para que puedas seguir en cualquier ordenador.
-      Si entras con Google, Firebase guarda también tu correo de Google para identificarte
-      (nunca se enseña a otros jugadores).
-      No usamos tus datos para nada más, ni los compartimos, ni hay publicidad ni seguimiento.
-      Como invitado no se guarda nada fuera de tu navegador.</p>
-    <p>Amigos y ranking: tu <b>apodo</b> es público para otros jugadores. Guardamos tu lista de
-      amigos, si estás en línea y tus mejores tiempos (con tu apodo y tu Pokémon).</p>
-    <p>Partidas en grupo: tu navegador se conecta <b>directamente</b> con el de tus compañeros
-      (como en una videollamada), así que cada uno puede llegar a ver la dirección IP del otro.
-      Juega en grupo sólo con gente que conozcas. Si la conexión directa no es posible, la partida
-      pasa por los servidores de Firebase.</p>
-    <p>Puedes borrar tu cuenta cuando quieras (se borran también tu apodo, tus amigos y tus marcas):</p>
-    <div class="row">
-      <button class="btn small" id="legal-delete">Borrar mi cuenta y mi partida</button>
-      <span id="legal-del-msg" class="note" style="margin:0"></span>
-    </div>
+    <p>PokéSurvivor funciona <b>sin conexión y sin cuentas</b>. Todo tu progreso (colección,
+      monedas, mejoras y estadísticas) se guarda <b>sólo en este navegador</b>, en el
+      almacenamiento local del dispositivo. No se envía nada a ningún servidor, no hay
+      publicidad ni seguimiento y no pedimos ningún dato personal.</p>
+    <p>Puedes exportar tu partida a un archivo para guardarla o pasarla a otro navegador, e
+      importarla de nuevo desde Ajustes → Partida.</p>
   </div>
 </section>
 <div id="boot" class="boot">
@@ -325,115 +259,22 @@
     <div class="boot-in">
       <h1>PokéSurvivor</h1>
       <p>PokéSurvivor necesita JavaScript para funcionar. Actívalo para jugar.</p>
-      <p>Fan game gratuito de supervivencia con 966 Pokémon de las 9 regiones: elige tu compañero, sobrevive a las hordas, evoluciona tus ataques, enfréntate a legendarios y juega en cooperativo con hasta 4 amigos.</p>
+      <p>Fan game gratuito de supervivencia con 966 Pokémon de las 9 regiones: elige tu compañero, sobrevive a las hordas, evoluciona tus ataques y enfréntate a legendarios.</p>
       <p><a href="en/guide/">Guía del juego</a> · <a href="en/pokedex/">Pokédex: todos los Pokémon jugables</a></p>    </div>
   </div>
 </noscript>
 
-<!-- ====== Apodo (para amigos y ranking) ====== -->
-<section id="scr-nick" class="scr dim hidden">
-  <div class="box" style="width:min(440px,100%)">
-    <h2>Elige tu apodo</h2>
-    <p class="sub">Es el nombre que verán tus amigos y el que sale en el ranking.
-      Tu nombre y tu correo de Google no se enseñan a nadie.</p>
-    <form id="nick-form" autocomplete="off">
-      <input id="nick-in" class="field" maxlength="16" spellcheck="false" placeholder="3-16 letras, números o _">
-      <p id="nick-err" class="err"></p>
-      <div class="row"><button id="nick-ok" class="btn gold grow" type="submit">Guardar apodo</button></div>
-    </form>
-    <div class="row" style="margin-top:8px"><button id="nick-later" class="btn ghost grow" type="button">Ahora no</button></div>
-  </div>
-</section>
-
-<!-- ====== Amigos ====== -->
-<section id="scr-friends" class="scr dim hidden">
-  <div class="box wide">
-    <div class="row between"><h2>Amigos</h2>
-      <div class="row"><button id="fr-room" class="btn small gold hidden">Ir a la sala</button><button class="btn small ghost" data-back>Volver</button></div></div>
-    <p class="sub" id="fr-me"></p>
-    <form id="fr-add" class="row" autocomplete="off">
-      <input id="fr-name" class="field grow" maxlength="16" spellcheck="false" placeholder="Apodo de tu amigo">
-      <button class="btn gold" type="submit" data-sfx="confirm">Añadir amigo</button>
-    </form>
-    <p id="fr-msg" class="note"></p>
-    <div id="fr-list" class="fr-list"></div>
-  </div>
-</section>
-
-<!-- ====== Sala (partida en grupo) ====== -->
-<section id="scr-lobby" class="scr dim hidden">
-  <div class="box wide">
-    <div class="row between"><h2>Sala</h2>
-      <div class="row"><button id="lobby-menu" class="btn small ghost">Menú</button><button id="lobby-leave" class="btn small ghost">Salir de la sala</button></div></div>
-    <p class="sub" id="lobby-sub"></p>
-    <div id="lobby-members" class="lobby-members"></div>
-    <h3 id="lobby-inv-title" style="margin:14px 0 6px">Invitar amigos</h3>
-    <div id="lobby-invite" class="fr-list"></div>
-    <div class="row" style="margin-top:14px">
-      <button id="lobby-start" class="btn gold grow">Empezar partida</button>
-    </div>
-    <p class="note" id="lobby-note"></p>
-  </div>
-</section>
-
-<!-- ====== Ranking ====== -->
-<section id="scr-rank" class="scr dim hidden">
-  <div class="box wide">
-    <div class="row between"><h2>Ranking <span class="sub" style="font-size:15px">· tiempo aguantado</span></h2><span class="row" style="gap:6px"><button id="rk-mod" class="btn small ghost hidden">Moderación</button><button class="btn small ghost" data-back>Volver</button></span></div>
-    <div class="gen-tabs" id="rk-mode"></div>
-    <div class="filters" id="rk-period"></div>
-    <div class="row rk-tools">
-      <div class="filters" id="rk-scope" style="margin:0"></div>
-      <input id="rk-poke" class="field" list="rk-dl" placeholder="Filtrar por Pokémon (histórico)" spellcheck="false">
-      <datalist id="rk-dl"></datalist>
-      <button id="rk-clear" class="btn small ghost hidden">Quitar filtro</button>
-    </div>
-    <div id="rk-list" class="rk-list"></div>
-    <div id="rk-me" class="rk-me"></div>
-  </div>
-</section>
-
-<!-- ====== Moderación del ranking (sólo la cuenta de admin, ver js/ui/mod-ui.js) ====== -->
-<section id="scr-mod" class="scr dim hidden">
-  <div class="box wide">
-    <div class="row between"><h2>Moderación</h2><span class="row" style="gap:6px"><button class="btn small danger" id="mod-purge">Quitar marcas de más de 1 hora</button><button class="btn small ghost" id="mod-back">Volver</button></span></div>
-    <div class="tabs" id="mod-tabs">
-      <div class="tab on" data-tab="rep">Reportes</div>
-      <div class="tab" data-tab="sus">Baneados</div>
-    </div>
-    <div id="mod-list" class="rk-list" style="max-height:60vh"></div>
-  </div>
-</section>
-
-<!-- ====== Misiones, logros y perfil ====== -->
+<!-- ====== Misiones y logros ====== -->
 <section id="scr-goals" class="scr dim hidden">
   <div class="box wide">
     <div class="row between"><h2>Misiones</h2><button class="btn small ghost" data-back>Volver</button></div>
     <div class="tabs" id="goals-tabs">
       <div class="tab on" data-tab="missions">Misiones</div>
       <div class="tab" data-tab="ach">Logros</div>
-      <div class="tab" data-tab="profile">Perfil</div>
     </div>
     <div id="goals-body" class="goals-body"></div>
   </div>
 </section>
-
-<!-- ====== Perfil público de un jugador ====== -->
-<section id="scr-profile" class="scr dim hidden">
-  <div class="box profile-box">
-    <div class="row end"><button class="btn small ghost" id="prof-close">Cerrar</button></div>
-    <div id="prof-body"></div>
-  </div>
-</section>
-
-<!-- ====== Invitación recibida ====== -->
-<div id="invite-pop" class="box invite-pop hidden">
-  <div id="inv-text"></div>
-  <div class="row" style="margin-top:10px">
-    <button id="inv-yes" class="btn gold small grow" data-sfx="confirm">Unirme</button>
-    <button id="inv-no" class="btn ghost small">No, gracias</button>
-  </div>
-</div>
 
 <!-- ====== Colección ====== -->
 <section id="scr-dex" class="scr dim hidden">
@@ -534,7 +375,6 @@
     <h2>Pausa</h2>
     <p class="sub kbd-hint"><kbd>WASD</kbd> moverse · <kbd>1</kbd>–<kbd>4</kbd> movimiento · <kbd>Q</kbd>/<kbd>E</kbd> ciclar · <kbd>Esc</kbd> pausa</p>
     <p class="sub touch-hint">Arrastra el dedo para moverte · toca un ataque para cambiarlo</p>
-    <p id="pause-coop" class="note hidden">Partida en grupo: el juego sigue mientras estás aquí.</p>
     <div id="pause-sound" class="sound-inline"></div>
     <div class="row" style="justify-content:center">
       <button id="btn-resume" class="btn gold">Continuar</button>
@@ -553,6 +393,6 @@
 </section>
 
 <!-- datos generados -->
-<script defer src="js/app.min.js?v=919c6711dd"></script>
+<script defer src="js/app.min.js?v=5d03f756a1"></script>
 </body>
 </html>

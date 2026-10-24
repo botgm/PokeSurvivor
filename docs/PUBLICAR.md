@@ -30,17 +30,10 @@ En el repositorio: **Settings → Pages** →
 
 En uno o dos minutos estará en <https://jpter78.github.io/pokesurvivor/>.
 
-## 4. Conectar con Firebase
+## 4. Nada más que conectar
 
-Si ya seguiste [FIREBASE.md](FIREBASE.md), añade `jpter78.github.io` a los
-**dominios autorizados** de Authentication (paso 5) y sube el
-`firebase-config.js` rellenado:
-
-```
-git add js/core/firebase-config.js
-git commit -m "Conectar con Firebase"
-git push
-```
+El juego es **100% offline**: no hay cuentas, nube, amigos, cooperativo ni
+ranking, así que no hay que configurar ningún servidor. Basta con GitHub Pages.
 
 ## 5. Que salga en Google
 

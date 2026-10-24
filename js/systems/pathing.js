@@ -55,7 +55,7 @@ G.Path = (() => {
     }
   }
 
-  /** Recalcula los campos de los jugadores vivos (lo llama el anfitrión / solitario). */
+  /** Recalcula los campos de los jugadores vivos. */
   function update(dt, players) {
     timer -= dt;
     if (timer > 0) return;

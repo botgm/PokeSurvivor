@@ -7,9 +7,9 @@
  */
 G.UI = (() => {
   const $ = id => document.getElementById(id);
-  const SCREENS = ['scr-login', 'scr-test', 'scr-result', 'scr-starters', 'scr-menu',
+  const SCREENS = ['scr-test', 'scr-result', 'scr-starters', 'scr-menu',
                    'scr-dex', 'scr-upgrades', 'scr-gacha', 'scr-levelup', 'scr-pause', 'scr-over',
-                   'scr-nick', 'scr-friends', 'scr-lobby', 'scr-rank', 'scr-item', 'scr-goals', 'scr-bond', 'scr-mod'];
+                   'scr-item', 'scr-goals', 'scr-bond'];
 
   function show(id, keepMenu = false) {
     for (const s of SCREENS) if (s !== id && !(keepMenu && s === 'scr-menu')) $(s).classList.add('hidden');
@@ -32,14 +32,9 @@ G.UI = (() => {
     $('coins').textContent = s ? s.coins.toLocaleString('es') : '0';
     const t = (s && s.tickets) || { t1: 0, t10: 0 };
     $('tickets-pill').innerHTML = `${G.Icons.html('ticket', 18)} ${t.t1} &nbsp;${G.Icons.html('ticket10', 18)} ${t.t10}`;
-    // Punto de sincronización: verde = guardado en la nube, amarillo = guardando,
-    // rojo = sin conexión (se guarda en local y se sube al volver).
-    const st = G.DB.guest ? 'guest' : G.DB.syncState;
-    const TIP = { ok: 'Guardado en la nube', syncing: 'Guardando…', pending: 'Guardando…',
-                  offline: 'Sin conexión: se subirá al volver', local: 'Guardado sólo en este navegador', guest: 'Invitado: no se guarda' };
-    $('user-pill').innerHTML = G.Icons.html(G.DB.guest ? 'user' : 'crown', 18) + ' <span translate="no">' + (G.DB.guest ? G.T('Invitado') : (G.DB.user || '')) + '</span>' +
-      `<i class="sync ${st}" title="${TIP[st] || ''}"></i>`;
-    $('user-pill').title = TIP[st] || '';
+    // Todo se guarda en este navegador (el juego es offline).
+    $('user-pill').innerHTML = G.Icons.html('user', 18) + ' <span translate="no">' + (G.DB.user || '') + '</span>';
+    $('user-pill').title = 'Guardado sólo en este navegador';
   }
 
   let toastEl = null, toastT = 0;
@@ -111,40 +106,7 @@ G.UI = (() => {
     $('legal-mail').href = 'mailto:' + CONTACT + '?subject=Pok%C3%A9Survivor';
     $('legal-repo').textContent = REPO.replace('https://', '');
     $('legal-repo').href = REPO;
-    const canDelete = G.DB.loggedIn && !G.DB.guest;
-    $('legal-delete').disabled = !canDelete;
-    $('legal-del-msg').textContent = canDelete ? '' : 'Inicia sesión para poder borrar tu cuenta.';
     $('scr-legal').classList.remove('hidden');
-  }
-
-  /**
-   * "¿Seguro que quieres borrar la cuenta?". Las cuentas de nombre y
-   * contraseña escriben su contraseña (Firebase pide confirmar quién eres);
-   * las de Google la confirman en la ventana de Google al seguir.
-   * Devuelve { pass } o null si se cancela.
-   */
-  function confirmDelete() {
-    if (!G.DB.nameAccount) return Promise.resolve(confirm(G.T('Se borrarán tu cuenta y toda tu partida, para siempre. ¿Seguro?')) ? { pass: '' } : null);
-    return new Promise(done => {
-      const el = document.createElement('section');
-      el.className = 'scr dim';
-      el.style.zIndex = 70;
-      el.innerHTML = `<div class="box center" style="max-width:380px">
-        <h3>Borrar cuenta</h3>
-        <p class="sub">Se borrarán tu cuenta y toda tu partida, para siempre. Para confirmarlo, escribe tu contraseña.</p>
-        <input class="field" type="password" maxlength="64" autocomplete="current-password" style="width:100%">
-        <div style="display:flex;gap:8px;margin-top:12px;justify-content:center;flex-wrap:wrap">
-          <button class="btn ghost" data-a="no">Cancelar</button>
-          <button class="btn danger" data-a="yes">Borrar para siempre</button>
-        </div></div>`;
-      document.body.appendChild(el);
-      const inp = el.querySelector('input');
-      const end = v => { el.remove(); done(v); };
-      el.querySelector('[data-a=no]').onclick = () => end(null);
-      el.querySelector('[data-a=yes]').onclick = () => { if (inp.value) end({ pass: inp.value }); else inp.focus(); };
-      inp.onkeydown = e => { if (e.key === 'Enter' && inp.value) end({ pass: inp.value }); if (e.key === 'Escape') end(null); };
-      setTimeout(() => inp.focus(), 50);
-    });
   }
 
   function closeLegal() { $('scr-legal').classList.add('hidden'); }
@@ -154,23 +116,11 @@ G.UI = (() => {
       if (e.target.closest('[data-legal]')) { e.preventDefault(); openLegal(); }
     });
     $('legal-close').onclick = closeLegal;
-    $('legal-delete').onclick = async () => {
-      const ok = await confirmDelete();
-      if (!ok) return;
-      $('legal-delete').disabled = true;
-      const r = await G.DB.deleteAccount(ok.pass);
-      if (!r.ok) { $('legal-del-msg').textContent = r.error; $('legal-delete').disabled = false; return; }
-      closeLegal();
-      toast('Cuenta borrada');
-      G.Audio.music(null);
-      G.Flow.toLogin();
-    };
   }
 
   function initChrome() {
     G.Icons.installCss();
     wireLegal();
-    G.DB.onSync(() => { if (!$('topbar').classList.contains('hidden')) refreshCoins(); });
     wireSounds();
     refreshSoundIcon();
     $('btn-sound').onclick = () => {
@@ -282,6 +232,6 @@ G.UI = (() => {
     return cv;
   }
 
-  return { $, show, hide, hideAll, isOpen, chrome, refreshCoins, toast, typeChips, stars, confirmDelete,
+  return { $, show, hide, hideAll, isOpen, chrome, refreshCoins, toast, typeChips, stars,
            sprite, spriteCanvas, tick, initChrome, soundControls };
 })();

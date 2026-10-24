@@ -1,18 +1,13 @@
-/* ============ game.js — flujo del juego y bucle principal ============
+/* ============ game.js â€” flujo del juego y bucle principal ============
  *
- *   login ──> test de personalidad ──> menú ──> run ──> resumen ──> menú
- *                (sólo la 1ª vez)          │
- *                                          ├─ Pokémon (colección)
- *                                          ├─ Mejoras
- *                                          └─ Gacha
+ *   arranque â”€â”€> test de personalidad â”€â”€> menĂº â”€â”€> run â”€â”€> resumen â”€â”€> menĂº
+ *                 (sĂ³lo la 1Âª vez)           â”‚
+ *                                          â”œâ”€ PokĂ©mon (colecciĂ³n)
+ *                                          â”œâ”€ Mejoras
+ *                                          â””â”€ Gacha
  *
- * Estados del bucle: 'ui' (menús, con el mundo de fondo), 'playing',
+ * Estados del bucle: 'ui' (menĂºs, con el mundo de fondo), 'playing',
  * 'levelup', 'paused', 'over'.
- *
- * Cooperativo (G.Coop.active): el anfitrión lleva enemigos, objetos y
- * experiencia; cada uno su Pokémon. La pausa no para el juego, las cartas de
- * nivel esperan a que elijan todos y un compañero caído se levanta si otro
- * se queda a su lado. Ver net/coop.js.
  */
 G.Game = (() => {
   let cv, ctx, dpr = 1, w = 0, h = 0;
@@ -32,7 +27,7 @@ G.Game = (() => {
     resize();
     addEventListener('resize', resize);
     G.Touch.init(cv);
-    // En móvil: al cambiar de app o girarlo en vertical, la partida se pausa.
+    // En mĂ³vil: al cambiar de app o girarlo en vertical, la partida se pausa.
     document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(); });
     G.RunUI.wirePause(() => { state = 'playing'; G.UI.hideAll(); }, quitRun);
     Backdrop.init();
@@ -41,8 +36,8 @@ G.Game = (() => {
   }
 
   function resize() {
-    // Resolución interna como mucho ×1,5: en pantallas ×2 dibujar el doble de
-    // píxeles era de lo que más costaba, y con el pixel art no se nota.
+    // ResoluciĂ³n interna como mucho Ă—1,5: en pantallas Ă—2 dibujar el doble de
+    // pĂ­xeles era de lo que mĂ¡s costaba, y con el pixel art no se nota.
     dpr = Math.min(1.5, window.devicePixelRatio || 1);
     w = cv.clientWidth; h = cv.clientHeight;
     cv.width = Math.round(w * dpr);
@@ -51,7 +46,7 @@ G.Game = (() => {
     checkOrientation();
   }
 
-  /** Móvil en vertical: aviso de girarlo (y pausa). */
+  /** MĂ³vil en vertical: aviso de girarlo (y pausa). */
   function checkOrientation() {
     const portrait = G.Touch.active && innerHeight > innerWidth;
     const el = document.getElementById('rotate');
@@ -61,32 +56,21 @@ G.Game = (() => {
     if (portrait) autoPause();
   }
 
-  /** Pausa sola (sólo en solitario: en grupo los demás siguen). */
+  /** Pausa sola (al cambiar de app, girar el mĂ³vil...). */
   function autoPause() {
     G.Touch.reset();
-    if (state === 'playing' && !G.Coop.active) { state = 'paused'; G.RunUI.showPause(); }
+    if (state === 'playing') { state = 'paused'; G.RunUI.showPause(); }
   }
 
-  /** Pausa/continúa (tecla Esc o P, o el botón de pausa del móvil). */
-  let holdBy = [];                   // grupo: quién está eligiendo fusión (todo parado)
-
+  /** Pausa/continĂºa (tecla Esc o P, o el botĂ³n de pausa del mĂ³vil). */
   function togglePause() {
-    // En grupo la pausa no para el juego (los demás siguen jugando).
-    if (G.Coop.active) {
-      if (state !== 'playing') return;
-      if (G.UI.isOpen('scr-pause')) G.UI.hide('scr-pause');
-      else { G.RunUI.showPause(true); G.Audio.sfx('pause'); }
-      return;
-    }
     if (state === 'playing') { state = 'paused'; G.RunUI.showPause(); G.Audio.sfx('pause'); }
     else if (state === 'paused') { state = 'playing'; G.UI.hideAll(); }
   }
 
   // ---------------- run ----------------
 
-  /** @param coop  { seed, host, members } para una partida en grupo */
-  function startRun(coop = null) {
-    holdBy = []; awayBy = null;
+  function startRun() {
     const save = G.DB.save;
     const mon = G.DEX_BY[save.partner];
     const perks = G.Upgrades.perks(G.DB.upgradesOf(mon.dex));
@@ -105,11 +89,10 @@ G.Game = (() => {
     G.Weather.reset();
     G.Path.clear();
     G.Hazards.clear();
-    G.World.reset(coop ? coop.seed : Math.floor(Math.random() * 1e6));
+    G.World.reset(Math.floor(Math.random() * 1e6));
     G.World.setBiome(0, true);
     biome = 0;
     time = 0; pendingLevels = 0;
-    runReal = performance.now(); tampered = false;
 
     pl = new G.Player(mon, perks, !!save.partnerShiny && G.DB.ownsShiny(mon.dex));
     banked = { t1: 0, t10: 0 };
@@ -127,33 +110,26 @@ G.Game = (() => {
       pl.setActive(0);
     }
 
-    if (coop) {
-      G.Coop.begin(coop, pl, coopApi);
-      G.Social.setPlaying(true);
-    }
     G.Camera.x = pl.x; G.Camera.y = pl.y; G.Camera.shake = 0;
-    // Hojas de sprites locales: el compañero y los primeros enemigos.
+    // Hojas de sprites locales: el compaĂ±ero y los primeros enemigos.
     G.Sprites.preload([mon.dex], 8000, pl.shiny);
     G.Audio.music(G.BIOME_MUSIC[0]);
-    // Para el ranking: el servidor apunta cuándo empieza la partida (anti-trampas).
-    if (!coop || G.Coop.isHost) G.Ranking.runStarted(coop ? 'g' : 's');
     deathT = 0;
 
     state = 'playing';
   }
 
   function quitRun() {
-    if (G.Coop.active) G.Coop.leave();
     endRun(false);
   }
 
-  /** Todos los jugadores de la partida (tú primero). */
-  function everyone() { return G.Coop.active ? G.Coop.players() : [pl]; }
+  /** Todos los jugadores de la partida (tĂº). */
+  function everyone() { return [pl]; }
 
   /** Experiencia que hace falta para el siguiente nivel (cofres con candado). */
   function levelXp() {
     if (!pl) return 20;
-    const k = (G.Coop.active ? G.Coop.xpFactor() : 1) * (pl.xpMul || 1);
+    const k = (pl.xpMul || 1);
     return Math.ceil((pl.xpNext - pl.xp + 1) / k);
   }
 
@@ -161,16 +137,10 @@ G.Game = (() => {
   let flashT = 0, flashDur = 1, flashCol = '#fff';
   function flash(col, dur) { flashCol = col; flashDur = dur; flashT = dur; }
 
-  function teamState() {
-    return { time, level: pl.level, xp: pl.xp, xpNext: pl.xpNext, kills: pl.kills, bosses: pl.bosses, coins: pl.coins, t1: pl.t1, t10: pl.t10 };
-  }
-  function summary() { return { t: time, ki: pl.kills, bo: pl.bosses, co: pl.coins, lv: pl.level, t1: pl.t1, t10: pl.t10 }; }
-
-  /** Lo que el cooperativo necesita del juego. */
   /**
    * Los tickets recogidos se guardan en cuanto los coges (como los shinies):
-   * antes sólo al acabar, y si la pestaña se cerraba de golpe se perdían.
-   * `banked` = los de esta partida que ya están en la partida guardada.
+   * antes sĂ³lo al acabar, y si la pestaĂ±a se cerraba de golpe se perdĂ­an.
+   * `banked` = los de esta partida que ya estĂ¡n en la partida guardada.
    */
   let banked = { t1: 0, t10: 0 };
   function bankTickets(save_ = true) {
@@ -184,109 +154,30 @@ G.Game = (() => {
     if (save_) G.DB.commit('run');
   }
 
-  const coopApi = {
-    team: teamState,
-    summary,
-    // Invitado: el anfitrión manda el reloj y lo del equipo.
-    syncTeam(t) {
-      if (Math.abs(t.time - time) > 0.4) time = t.time;
-      if (t.level > pl.level) G.Audio.sfx('xp');
-      pl.level = t.level; pl.xp = t.xp; pl.xpNext = t.xpNext;
-      pl.kills = t.kills; pl.bosses = t.bosses; pl.coins = t.coins;
-      if (t.t1 > pl.t1 || t.t10 > pl.t10) G.Audio.sfx('shiny');
-      pl.t1 = t.t1 || 0; pl.t10 = t.t10 || 0;
-      bankTickets();
-    },
-    levelStart(level) {
-      // (Si tenías abierta la elección de objeto, vuelve al terminar: afterLevelUp.)
-      if (state === 'choice' && openItem && G.Coop.active) G.Coop.holdEnd();
-      state = 'levelup';
-      G.UI.hide('scr-pause');
-      G.Audio.sfx('levelup');
-      G.RunUI.showLevelUp(level, G.LevelUp.offer(pl), card => {
-        G.Audio.sfx('confirm');
-        card.apply(pl);
-        G.Coop.localPicked();
-      }, true);
-    },
-    waiting(names) { G.RunUI.setWaiting(names); },
-    resume() {
-      G.RunUI.closeLevelUp();
-      if (state === 'levelup') { state = holdBy.length ? 'held' : 'playing'; afterLevelUp(); }
-    },
-    /** ¿Estás eligiendo algo que para la partida (objeto o vínculo)? */
-    choosing() { return state === 'choice'; },
-    inLevelUp() { return state === 'levelup'; },
-    shiny(dex) { G.onShinyCaught({ dex, name: (G.DEX_BY[dex] || {}).name || '' }); },
-    over(d) {
-      if (d) Object.assign(pl, { kills: d.ki, bosses: d.bo, coins: d.co, level: Math.max(pl.level, d.lv || 1), t1: d.t1 || pl.t1, t10: d.t10 || pl.t10 });
-      if (d && d.t) time = d.t;
-      if (d && d.why === 'host') G.UI.toast('El anfitrión ha terminado la partida', 3200);
-      endRun(!(d && d.why === 'host'));
-    },
-    lost(msg) { G.UI.toast(msg, 3600); endRun(false); },
-    item(id) { offerItem(id); },
-    mateLeft() {},
-    /** Grupo: quién está eligiendo fusión. Mientras haya alguien, todo parado. */
-    hold(names) {
-      holdBy = names || [];
-      const mine = G.UI.isOpen('scr-bond');
-      if (holdBy.length) {
-        if (state === 'playing') state = 'held';
-        if (pl && pl.bonds > 0) offerBond(true);      // si tú también tienes vínculo, eliges a la vez
-        const others = holdBy.filter(n => n !== (G.Social.me && G.Social.me.name) && n !== 'Tú');
-        if (!mine && others.length) G.Spawner.say('Pausa: ' + others.join(', ') + ' ' + (others.length > 1 ? 'están eligiendo…' : 'está eligiendo…'), 999, true);
-        else if (!others.length) G.Spawner.say(awayBy ? awayText() : '', awayBy ? 999 : 0, true);   // sólo tú: sin aviso viejo
-      } else {
-        if (state === 'held' && !awayBy) state = 'playing';
-        G.Spawner.say(awayBy ? awayText() : '', awayBy ? 999 : 0, true);
-      }
-    },
-    /** Grupo (invitado): el anfitrión se ha ido de la pestaña o no responde: todo parado. */
-    away(name) {
-      awayBy = name || null;
-      if (awayBy) {
-        if (state === 'playing') state = 'held';
-        G.Spawner.say(awayText(), 999, true);
-      } else if (!holdBy.length) {
-        if (state === 'held') state = 'playing';
-        G.Spawner.say('', 0, true);
-      }
-    }
-  };
-  let awayBy = null;
-  const awayText = () => 'Pausa: esperando a ' + awayBy + ' (anfitrión)…';
-
-  /** Has llevado a casa a un Pokémon perdido y se une a ti (events.js). */
+  /** Has llevado a casa a un PokĂ©mon perdido y se une a ti (events.js). */
   G.onRescue = (dex, name) => {
     if (!G.DB.save || !pl) return;
     const isNew = !G.DB.owns(dex);
     if (isNew) { G.DB.grant(dex, 'rescue'); G.DB.commit(true); }
     else pl.coins += 150;
-    G.Spawner.say(isNew ? '¡' + name + ' se une a tu equipo!' : '¡' + name + ' te da las gracias! (+150 monedas, ya lo tenías)', 4);
+    G.Spawner.say(isNew ? 'Â¡' + name + ' se une a tu equipo!' : 'Â¡' + name + ' te da las gracias! (+150 monedas, ya lo tenĂ­as)', 4);
     G.Audio.sfx('shinyGet');
   };
 
-  /** Un shiny salvaje cae: te lo quedas (y la versión normal si no la tenías). */
+  /** Un shiny salvaje cae: te lo quedas (y la versiĂ³n normal si no la tenĂ­as). */
   G.onShinyCaught = e => {
     if (!G.DB.save || !pl) return;
-    if (G.Coop.isHost) G.Coop.shinyCaught(e);
     const isNew = G.DB.grantShiny(e.dex, 'wild');
     G.DB.save.stats.shinies++;
     G.DB.commit(true);
     caught.push({ dex: e.dex, isNew });
-    G.Spawner.say(isNew ? '¡Has conseguido a ' + e.name + ' shiny!' : '¡Otro ' + e.name + ' shiny! (+300 monedas)', 4);
+    G.Spawner.say(isNew ? 'Â¡Has conseguido a ' + e.name + ' shiny!' : 'Â¡Otro ' + e.name + ' shiny! (+300 monedas)', 4);
     if (!isNew) pl.coins += 300;
     G.Audio.sfx('shinyGet');
   };
 
   function endRun(dead = true) {
     if (state === 'over' || !pl) return;
-    const coop = !!pl.uid;                    // sólo las partidas en grupo le ponen uid
-    const wasHost = !!pl.coopHost;
-    const team = coop ? G.Coop.members.slice() : [];
-    if (G.Coop.active) G.Coop.end();
-    if (coop) G.Social.setPlaying(false);
     state = 'over';
     G.Audio.music(null);
     G.Audio.sfx(dead ? 'gameover' : 'back');
@@ -306,66 +197,29 @@ G.Game = (() => {
     save.stats.runs++;
     save.stats.totalKills += pl.kills;
     save.stats.bestTime = Math.max(save.stats.bestTime, Math.floor(time));
-    if (coop) save.stats.bestGroupTime = Math.max(save.stats.bestGroupTime || 0, Math.floor(time));
     save.stats.bestLevel = Math.max(save.stats.bestLevel, pl.level);
     save.stats.coinsEarned += coins;
     const judge = G.Judgment.summary();
     if (judge) G.Progress.event('judgeEnd', judge);
     G.Judgment.reset();
-    G.Progress.event('runEnd', { time, level: pl.level, coins: pl.coins, types: pl.mon.types, group: coop });
+    G.Progress.event('runEnd', { time, level: pl.level, coins: pl.coins, types: pl.mon.types, group: false });
     G.Progress.checkAch();
-    // A la nube al acabar la partida (como mucho cada 30 min); si la marca entra
-    // en un top (hoy, semana o mes), enseguida (abajo, tras subirla al ranking).
-    G.DB.commit('run');
-    if (G.Social.me) G.Social.publishProfile();
-
-    // Ranking: en solitario cada uno lo suyo; en grupo lo sube el anfitrión.
-    const mark = { t: Math.floor(time), lv: pl.level, kills: pl.kills };
-    // Si la partida se ha tocado (ver clean()), no sube al ranking (sin avisar); lo demás, sí.
-    const ok = clean();
-    const sent = ok && !coop ? G.Ranking.submitSolo(Object.assign(mark, { dex: pl.dex, shiny: pl.shiny }))
-               : ok && wasHost ? G.Ranking.submitGroup(Object.assign(mark, { members: team })) : null;
-    if (sent) sent.then(b => { if (b && b.some(p => p !== 'a')) G.DB.commit(true); }).catch(() => {});
+    // Se guarda al acabar la partida (con todo lo ganado).
+    G.DB.commit();
 
     G.RunUI.showOver({
       dead, time, level: pl.level, kills: pl.kills, bosses: pl.bosses, coins, record, t1: pl.t1, t10: pl.t10, judge,
       moves: pl.moves, caught,
-      breakdown: Object.entries(parts).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(' · ') +
-                 (mul > 1 ? ` · ×${mul.toFixed(2)} Fortuna` : '')
+      breakdown: Object.entries(parts).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(' Â· ') +
+                 (mul > 1 ? ` Â· Ă—${mul.toFixed(2)} Fortuna` : '')
     }, () => { pl = null; G.Flow.afterRun(); });
-  }
-
-  /*
-   * ¿Partida limpia? Sólo cosas que ningún jugador legal puede hacer, con
-   * márgenes enormes (el sistema del 10-10 daba falsos positivos):
-   *   - el reloj de la partida va más deprisa que el real (trucos de velocidad)
-   *   - funciones de tu Pokémon sustituidas (así se hace uno invencible)
-   *   - vida, ataque, velocidad o recarga muy por encima de lo posible
-   *   - se han usado las funciones de pruebas (saltar el reloj...)
-   * Si algo salta, esa partida no sube al ranking (sin avisar) y nada más.
-   */
-  let runReal = 0, tampered = false;
-  function clean() {
-    if (tampered) return false;
-    if (time > (performance.now() - runReal) / 1000 + 10) return false;
-    for (const k of ['hurt', 'update', 'heal', 'gainXp']) if (Object.prototype.hasOwnProperty.call(pl, k)) return false;
-    if (!isFinite(pl.hp) || !isFinite(pl.maxHp) || pl.hp > pl.maxHp + 1 || pl.maxHp > 50000) return false;
-    if (pl.atkMul > 2000 || pl.spdMul > 25 || pl.cdMul < 0.03 || pl.level > 20 + time / 3) return false;
-    return true;
   }
 
   // ---------------- subida de nivel ----------------
 
   function maybeLevelUp() {
     if (pendingLevels <= 0 || state !== 'playing') return;
-    if (G.Coop.active) {
-      // En grupo, las cartas salen a la vez para todos y se espera a que elijan.
-      if (G.Coop.players().every(p => p.dead)) return;
-      pendingLevels--;
-      G.Coop.levelStart(pl.level);
-      return;
-    }
-    // Nunca abras cartas con el Pokémon caído (morir y recoger XP en el mismo frame).
+    // Nunca abras cartas con el PokĂ©mon caĂ­do (morir y recoger XP en el mismo frame).
     if (pl.dead) return;
     pendingLevels--;
     state = 'levelup';
@@ -377,35 +231,33 @@ G.Game = (() => {
     });
   }
 
-  // ---------------- vínculos ----------------
+  // ---------------- vĂ­nculos ----------------
 
   /**
-   * Vínculo de un legendario: eliges qué movimientos se fusionan.
+   * VĂ­nculo de un legendario: eliges quĂ© movimientos se fusionan.
    * Si ahora no se puede (no hay dos sueltos), se guarda hasta que aprendas
-   * otro movimiento. Se mira en cada fotograma: si otra pantalla la tapa (cartas
-   * de nivel en grupo, pausa), vuelve a salir al cerrarla.
-   * @param quiet  no avisar si todavía no se puede
+   * otro movimiento. Se mira en cada fotograma: si otra pantalla la tapa
+   * (cartas de nivel, pausa), vuelve a salir al cerrarla.
+   * @param quiet  no avisar si todavĂ­a no se puede
    */
   function offerBond(quiet = false) {
-    if (!pl || pl.bonds <= 0 || pl.dead || (state !== 'playing' && state !== 'held') || G.Rift.inArena) return;
+    if (!pl || pl.bonds <= 0 || pl.dead || state !== 'playing' || G.Rift.inArena) return;
     if (['scr-bond', 'scr-pause', 'scr-item', 'scr-levelup'].some(G.UI.isOpen)) return;
     const opt = pl.bondOptions();
     if (!opt) {
-      if (!quiet) G.Spawner.say('Guardas el vínculo: aprende otro movimiento para usarlo', 3, true);
+      if (!quiet) G.Spawner.say('Guardas el vĂ­nculo: aprende otro movimiento para usarlo', 3, true);
       return;
     }
-    // Se para el juego; en grupo, para todos hasta que cada uno elige (G.Coop.holdStart).
+    // Se para el juego mientras eliges.
     state = 'choice';
-    if (G.Coop.active) G.Coop.holdStart();
     G.Audio.sfx('levelup');
     G.RunUI.showBond(opt, picked => {
       const group = pl.fuse(picked, opt.group);
       G.Audio.sfx('legend');
       G.FX.ring(pl.x, pl.y, 8, 130, '#ff8ad8', 0.8, 6);
       G.FX.burst(pl.x, pl.y - pl.bodyH * 0.5, '#ffb3e6', 40, 240);
-      G.Spawner.say('¡Vínculo! ' + group.length + ' movimientos a la vez', 2.6, true);
-      if (state === 'choice') state = holdBy.length ? 'held' : 'playing';
-      if (G.Coop.active) G.Coop.holdEnd();
+      G.Spawner.say('Â¡VĂ­nculo! ' + group.length + ' movimientos a la vez', 2.6, true);
+      if (state === 'choice') state = 'playing';
     });
   }
 
@@ -414,19 +266,17 @@ G.Game = (() => {
   const PICK_SFX = { xp: 'xp', xpBig: 'xp', coin: 'coin', heal: 'heal', bomb: 'break', magnet: 'confirm', ticket: 'shiny', ticket10: 'legend', item: 'legend' };
 
   /*
-   * Cooperativo: la elección de objeto y las cartas de nivel no pueden taparse.
-   * Si llega un objeto con las cartas abiertas, espera a que elijas carta; y si
-   * las cartas llegan con la elección de objeto abierta, ésta vuelve a salir al
-   * terminar. (Antes una cerraba la otra, nadie podía terminar de elegir y la
-   * partida se quedaba parada para todos.)
+   * La elecciĂ³n de objeto y las cartas de nivel no pueden taparse: si llega un
+   * objeto con las cartas abiertas, espera a que elijas carta; y si las cartas
+   * llegan con la elecciĂ³n de objeto abierta, Ă©sta vuelve a salir al terminar.
    */
-  let openItem = null;           // { cur, next, take } elección de objeto sin terminar
+  let openItem = null;           // { cur, next, take } elecciĂ³n de objeto sin terminar
   const laterItems = [];         // objetos recogidos con las cartas de nivel abiertas
   function afterLevelUp() {
-    if (state !== 'playing' && state !== 'held') return;
+    if (state !== 'playing') return;
     if (openItem && !G.UI.isOpen('scr-item')) {
       const o = openItem;
-      if (o.mine) { state = 'choice'; if (G.Coop.active) G.Coop.holdStart(); }
+      if (o.mine) state = 'choice';
       G.RunUI.showItemChoice(o.cur, o.next, o.take);
       return;
     }
@@ -437,44 +287,34 @@ G.Game = (() => {
   function offerItem(id) {
     if (!pl || !G.Items.BY[id]) return;
     if (state === 'levelup' || G.UI.isOpen('scr-levelup')) { laterItems.push(id); return; }
-    let mine = false;            // esta elección es la que ha parado el juego
+    let mine = false;            // esta elecciĂ³n es la que ha parado el juego
     const take = got => {
       openItem = null;
       if (got !== pl.item) {
         pl.equip(got);
-        G.Spawner.say('¡Llevas ' + G.Items.BY[got].name + '!', 2.6, true);
+        G.Spawner.say('Â¡Llevas ' + G.Items.BY[got].name + '!', 2.6, true);
         G.Progress.event('item', { id: got });
       }
       if (!mine) { afterLevelUp(); return; }
-      if (state === 'choice') state = holdBy.length ? 'held' : 'playing';
-      if (G.Coop.active) G.Coop.holdEnd();
+      if (state === 'choice') state = 'playing';
       afterLevelUp();
     };
     if (!pl.item) { take(id); return; }
     if (pl.item === id) { G.Spawner.say('Ya llevas ' + G.Items.BY[id].name, 2, true); return; }
-    // Se para el juego mientras eliges; en grupo, para todos (como con las
-    // fusiones). Antes en grupo seguía y te pegaban mientras elegías.
-    if (state === 'playing' || state === 'held') {
+    // Se para el juego mientras eliges.
+    if (state === 'playing') {
       mine = true;
       state = 'choice';
-      if (G.Coop.active) G.Coop.holdStart();
     }
     openItem = { cur: pl.item, next: id, take, get mine() { return mine; } };
     G.RunUI.showItemChoice(pl.item, id, take);
   }
 
-  /** @param who  quien lo ha cogido (en cooperativo puede ser un compañero) */
-  function onCollect(p, who = pl) {
-    const mine = who === pl;
-    if (G.Coop.active && !G.Coop.isHost) {
-      // Copia de un objeto del anfitrión: el efecto lo decide él.
-      if (mine) G.Audio.sfx(PICK_SFX[p.kind]);
-      return;
-    }
-    if (G.Coop.active) G.Coop.collected(p, who);
-    if (mine || p.kind === 'bomb') G.Audio.sfx(PICK_SFX[p.kind]);
+  function onCollect(p) {
+    const who = pl;
+    G.Audio.sfx(PICK_SFX[p.kind]);
     if (p.kind === 'xp' || p.kind === 'xpBig') {
-      pendingLevels += pl.gainXp(p.value * (G.Coop.active ? G.Coop.xpFactor() : 1));
+      pendingLevels += pl.gainXp(p.value);
       return;
     }
     if (p.kind === 'coin') {
@@ -483,18 +323,18 @@ G.Game = (() => {
       return;
     }
     if (p.kind === 'item') {
-      if (mine) offerItem(p.value);
+      offerItem(p.value);
       return;
     }
     if (p.kind === 'ticket' || p.kind === 'ticket10') {
       if (p.kind === 'ticket') pl.t1++; else pl.t10++;
       bankTickets();
-      G.FX.dmgText(who.x, who.y - who.bodyH - 8, p.kind === 'ticket' ? '+1 ticket' : '¡Ticket ×10!', p.kind === 'ticket' ? '#ffd23f' : '#d9a6ff', true);
+      G.FX.dmgText(who.x, who.y - who.bodyH - 8, p.kind === 'ticket' ? '+1 ticket' : 'Â¡Ticket Ă—10!', p.kind === 'ticket' ? '#ffd23f' : '#d9a6ff', true);
       G.FX.ring(who.x, who.y, 6, 50, p.kind === 'ticket' ? '#ffd23f' : '#c47bff', 0.4, 3);
       return;
     }
     if (p.kind === 'heal') {
-      if (mine) pl.heal(pl.maxHp * 0.3);
+      pl.heal(pl.maxHp * 0.3);
       G.FX.ring(who.x, who.y, 6, 60, '#5fe08a', 0.4, 3);
       return;
     }
@@ -508,7 +348,7 @@ G.Game = (() => {
       const R = G.Camera.outerRadius();
       G.FX.ring(who.x, who.y, 20, R, '#ff7b3d', 0.5, 6);
       for (const e of G.EnemyMgr.all()) {
-        if (mine ? !G.Camera.sees(e.x, e.y, 0) : G.U.dist2(e.x, e.y, who.x, who.y) > R * R) continue;
+        if (!G.Camera.sees(e.x, e.y, 0)) continue;
         e.hurt(60 + pl.level * 14, '#ff7b3d', e.x - who.x, e.y - who.y, 160);
       }
     }
@@ -518,7 +358,7 @@ G.Game = (() => {
 
   function handleKeys() {
     if (G.SettingsUI.isOpen) { if (G.Input.tap('escape')) G.SettingsUI.close(); return; }
-    // La Sentencia de Arceus: Espacio, Intro o Esc saltan la animación (si se puede).
+    // La Sentencia de Arceus: Espacio, Intro o Esc saltan la animaciĂ³n (si se puede).
     if (G.Judgment.cinematic && state === 'playing') {
       if (['space', 'enter', 'escape'].some(k => G.Input.tap(k))) G.Judgment.skip();
       return;
@@ -543,8 +383,8 @@ G.Game = (() => {
       return;
     }
     if (state === 'ui') {
-      // Esc en una subpantalla del menú vuelve al menú.
-      if (G.Input.tap('escape') && !G.UI.isOpen('scr-profile') && ['scr-dex', 'scr-upgrades', 'scr-gacha', 'scr-friends', 'scr-rank', 'scr-goals'].some(G.UI.isOpen)
+      // Esc en una subpantalla del menĂº vuelve al menĂº.
+      if (G.Input.tap('escape') && ['scr-dex', 'scr-upgrades', 'scr-gacha', 'scr-goals'].some(G.UI.isOpen)
           && document.getElementById('pull-fx').classList.contains('hidden')) G.MenuUI.open();
       return;
     }
@@ -564,11 +404,11 @@ G.Game = (() => {
   let frameDt = 0, speedK = 1;
   let fpsShown = 60, fpsAcc = 0, fpsN = 0;
   // El siguiente fotograma se pide ANTES de nada: si algo falla a mitad, el
-  // juego sigue (antes se quedaba congelado para siempre y había que recargar;
-  // así se perdió una partida enorme al abrirse una grieta).
+  // juego sigue (antes se quedaba congelado para siempre y habĂ­a que recargar;
+  // asĂ­ se perdiĂ³ una partida enorme al abrirse una grieta).
   // Si falla fotograma tras fotograma (el juego ya no avanza ni se ve), la
-  // partida se da por terminada a los ~3 s y se guarda: tiempo, derrotados,
-  // récords y ranking. Mejor eso que una pantalla negra y perderlo todo.
+  // partida se da por terminada a los ~3 s y se guarda: tiempo, derrotados y
+  // rĂ©cords. Mejor eso que una pantalla negra y perderlo todo.
   let loopErrs = 0, errRun = 0;
   function loop(ts) {
     requestAnimationFrame(loop);
@@ -580,7 +420,7 @@ G.Game = (() => {
         try {
           G.UI.hideAll();
           quitRun();
-          G.UI.toast('El juego ha fallado: tu partida se ha guardado hasta aquí', 5000);
+          G.UI.toast('El juego ha fallado: tu partida se ha guardado hasta aquĂ­', 5000);
         } catch (e2) { console.error('[Game] no se pudo cerrar la partida:', e2); }
       }
     }
@@ -599,8 +439,6 @@ G.Game = (() => {
 
     if (state === 'playing') update(dt);
     else if (pl && state !== 'ui') { G.FX.update(dt * 0.25); pl.anim.update(dt * 0.25); }
-    // La red se atiende siempre (también con las cartas de nivel abiertas).
-    if (G.Coop.active && pl && state !== 'ui' && state !== 'over') G.Coop.tick(dt);
 
     if (pl && state !== 'ui') render(); else Backdrop.render(ctx, w, h, dpr, dt);
     G.UI.tick(dt);
@@ -609,21 +447,19 @@ G.Game = (() => {
   }
 
   function update(dt) {
-    const coop = G.Coop.active;
     if (flashT > 0) flashT -= dt;
-    // La Sentencia de Arceus: mientras dura la animación, todo lo demás se para.
+    // La Sentencia de Arceus: mientras dura la animaciĂ³n, todo lo demĂ¡s se para.
     if (G.Judgment.cinematic) {
       G.Judgment.cineTick(dt);
       pl.anim.update(dt);
-      if (coop) for (const p of G.Coop.puppets()) p.netUpdate(dt);
       G.World.update(dt, G.Camera);
       G.FX.update(dt);
       G.Audio.music(G.Judgment.music);
       return;
     }
-    // Tras caer, deja que se vea la animación de Faint antes del resumen.
-    // (En la arena de la grieta no: allí caer sólo te echa de vuelta.)
-    if (pl.dead && !coop && !G.Rift.inArena) {
+    // Tras caer, deja que se vea la animaciĂ³n de Faint antes del resumen.
+    // (En la arena de la grieta no: allĂ­ caer sĂ³lo te echa de vuelta.)
+    if (pl.dead && !G.Rift.inArena) {
       deathT += dt;
       pl.update(dt);
       G.EnemyMgr.update(dt * 0.3, pl);
@@ -639,22 +475,16 @@ G.Game = (() => {
       biome = b;
       G.World.setBiome(b);
       G.Audio.sfx('biome');
-      G.Spawner.say('— ' + G.World.biomeName() + ' —', 3);
+      G.Spawner.say('â€” ' + G.World.biomeName() + ' â€”', 3);
       G.FX.ring(pl.x, pl.y, 10, G.Camera.outerRadius(), '#ffffff', 0.7, 6);
     }
 
-    pl.frozen = coop && (G.UI.isOpen('scr-pause') || G.UI.isOpen('scr-item'));
     pl.update(dt);
-    if (coop) {
-      for (const p of G.Coop.puppets()) { p.netUpdate(dt); G.Combat.ghostOrbit(p, dt, time); }
-      if (pl.dead) reviveTick(dt);
-    }
     G.Camera.follow(pl.x, pl.y, dt);
     G.World.update(dt, G.Camera);
 
     const all = everyone();
-    if (!coop || G.Coop.isHost) { G.Path.update(dt, all); G.Spawner.update(dt, all, time); }
-    else G.Spawner.tickBanner(dt);
+    G.Path.update(dt, all); G.Spawner.update(dt, all, time);
     G.EnemyMgr.update(dt, all);
     G.EnemyMgr.rebuildGrid();
     G.Combat.tick(dt, pl, time);
@@ -671,27 +501,8 @@ G.Game = (() => {
     G.FX.update(dt);
 
     G.Audio.music(G.Judgment.active ? G.Judgment.music : G.Rift.inArena ? 'rift' : G.EnemyMgr.bossAlive() ? 'boss' : G.BIOME_MUSIC[biome % G.BIOME_MUSIC.length]);
-    if (!coop || G.Coop.isHost) maybeLevelUp();
+    maybeLevelUp();
     if (pl.bonds > 0) offerBond(true);
-    if (G.Coop.isHost) checkAllDown(dt);
-  }
-
-  /** Caído en grupo: un compañero a tu lado te va levantando. */
-  function reviveTick(dt) {
-    const helper = G.Coop.puppets().some(p => !p.dead && G.U.dist2(p.x, p.y, pl.x, pl.y) < 56 * 56);
-    pl.reviveT = helper ? (pl.reviveT || 0) + dt : Math.max(0, (pl.reviveT || 0) - dt * 0.5);
-    if (pl.reviveT >= G.Player.REVIVE_TIME) pl.revive(0.5);
-  }
-
-  /** Anfitrión: si caéis todos, se acaba (tras ver caer al último). */
-  function checkAllDown(dt) {
-    if (G.Rift.inArena || !G.Coop.players().every(p => p.dead)) { deathT = 0; return; }
-    deathT += dt;
-    if (deathT > 1.6) {
-      deathT = 0;
-      G.Coop.over(summary());
-      endRun(true);
-    }
   }
 
   // ---------------- dibujo ----------------
@@ -706,7 +517,7 @@ G.Game = (() => {
 
     // Todo lo que tiene "pies" se ordena por Y: objetos, enemigos, jugador.
     const items = [];
-    // Los planos (manantiales, trampas) siempre debajo de todo lo demás.
+    // Los planos (manantiales, trampas) siempre debajo de todo lo demĂ¡s.
     for (const p of G.World.visibleProps(cam)) items.push({ y: p.flat ? p.y - 4000 : p.y, prop: p });
     for (const e of G.EnemyMgr.drawables(cam)) items.push({ y: e.y, ent: e });
     for (const e of extra) items.push({ y: e.y, ent: e });
@@ -730,7 +541,7 @@ G.Game = (() => {
     ctx.save();
     ctx.scale(G.Camera.scale, G.Camera.scale);
     G.Camera.apply(ctx);
-    drawScene(G.Camera, G.Coop.active ? [pl, ...G.Coop.puppets()] : [pl]);
+    drawScene(G.Camera, [pl]);
     G.Projectiles.draw(ctx);
     G.Combat.drawAirFields(ctx);
     G.FX.draw(ctx);
@@ -739,7 +550,7 @@ G.Game = (() => {
 
     G.Weather.draw(ctx, w, h, frameDt);
     G.World.drawVignette(ctx, w, h);
-    // Niebla: la viñeta se cierra un poco (sin tapar el centro).
+    // Niebla: la viĂ±eta se cierra un poco (sin tapar el centro).
     const fog = G.Weather.vignette;
     if (fog > 0) {
       const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.32, w / 2, h / 2, Math.max(w, h) * 0.62);
@@ -753,7 +564,7 @@ G.Game = (() => {
     G.Touch.draw(ctx);
     if (G.Settings.get('fps')) {
       ctx.save();
-      ctx.font = '700 11px Pixelify, monospace';
+      ctx.font = '700 11px Pixelify,"Pixelify VI",monospace';
       ctx.textAlign = 'right';
       ctx.fillStyle = fpsShown >= 50 ? '#5fe08a' : fpsShown >= 30 ? '#ffd23f' : '#ff5f6d';
       ctx.fillText(fpsShown + ' FPS', w - 10, h - 8);
@@ -769,11 +580,11 @@ G.Game = (() => {
     }
   }
 
-  // ---------------- fondo de los menús ----------------
+  // ---------------- fondo de los menĂºs ----------------
 
   /**
-   * El mundo de verdad, con Pokémon salvajes paseando y la cámara a la deriva.
-   * Así el menú enseña desde el primer segundo cómo se ve el juego.
+   * El mundo de verdad, con PokĂ©mon salvajes paseando y la cĂ¡mara a la deriva.
+   * AsĂ­ el menĂº enseĂ±a desde el primer segundo cĂ³mo se ve el juego.
    */
   const Backdrop = (() => {
     let wanderers = [], t = 0, ready = false, biomeT = 0, bi = 0;
@@ -805,7 +616,7 @@ G.Game = (() => {
     function step(dt) {
       t += dt;
       G.World.update(dt, G.Camera);
-      // Deriva lenta de la cámara.
+      // Deriva lenta de la cĂ¡mara.
       G.Camera.x += Math.cos(t * 0.05) * 14 * dt;
       G.Camera.y += Math.sin(t * 0.037) * 10 * dt;
       G.Camera.follow(G.Camera.x, G.Camera.y, dt);
@@ -833,7 +644,7 @@ G.Game = (() => {
         if (moving) wd.anim.dir = G.Sprites.dirFromAngle(Math.atan2(wd.vy, wd.vx));
         wd.anim.loop(moving ? 'Walk' : 'Idle');
         wd.anim.update(dt);
-        // Si se queda fuera de cámara, reaparece dentro.
+        // Si se queda fuera de cĂ¡mara, reaparece dentro.
         if (!G.Camera.sees(wd.x, wd.y, 120)) Object.assign(wd, spawn(wd.dex, false));
       }
     }
@@ -851,7 +662,7 @@ G.Game = (() => {
       G.World.drawVignette(ctx, w, h);
     }
 
-    /** Al volver de una run, recupera el mundo del menú. */
+    /** Al volver de una run, recupera el mundo del menĂº. */
     function restore() {
       G.World.reset(4242);
       G.World.setBiome(bi, true);
@@ -865,39 +676,36 @@ G.Game = (() => {
   return {
     init, startRun, everyone, levelXp, flash, offerBond,
     /** Para pruebas: salta el reloj de la run. */
-    debugTime(t) { tampered = true; time = t; },
-    /** Para grabar vídeos: cámara lenta (0,5 = mitad de velocidad). */
-    debugSpeed(k) { if (k > 1) tampered = true; speedK = k; },
+    debugTime(t) { time = t; },
+    /** Para grabar vĂ­deos: cĂ¡mara lenta (0,5 = mitad de velocidad). */
+    debugSpeed(k) { speedK = k; },
     togglePause,
-    /** Abandona la partida en curso (p. ej. al cerrar sesión desde Ajustes). */
+    /** Abandona la partida en curso. */
     quit() { if (state !== 'ui' && state !== 'over') quitRun(); },
-    /** Para grabar vídeos: abre las cartas de subir de nivel. */
-    debugLevelUp() { tampered = true; pl.level++; pendingLevels++; },
+    /** Para grabar vĂ­deos: abre las cartas de subir de nivel. */
+    debugLevelUp() { pl.level++; pendingLevels++; },
     toUI() { state = 'ui'; Backdrop.restore(); },
     get state() { return state; }, get player() { return pl; }, st
   };
 })();
 
-/* ============ Flow — transiciones entre pantallas ============ */
+/* ============ Flow â€” transiciones entre pantallas ============ */
 G.Flow = {
   boot() {
     G.UI.initChrome();
-    G.LoginUI.init(); G.TestUI.init(); G.MenuUI.init(); G.GachaUI.init();
-    G.SocialUI.init(); G.RankingUI.init(); G.ModUI.init(); G.GoalsUI.init(); G.ProfileUI.init(); G.SettingsUI.init(); G.SupportUI.init(); G.NewsUI.init(); G.Updater.init();
-    // Tu nombre arriba a la derecha abre tu perfil.
-    document.getElementById('user-pill').onclick = () => G.GoalsUI.open('profile');
+    G.TestUI.init(); G.MenuUI.init(); G.GachaUI.init();
+    G.GoalsUI.init(); G.SettingsUI.init(); G.SupportUI.init(); G.NewsUI.init();
     G.Audio.music('village');     // suena tras el primer clic (lo exige el navegador)
     G.Game.init();
-    // La base de datos (nube o local) recupera la sesión anterior.
-    G.DB.ready().then(restored => {
-      document.getElementById('boot').classList.add('hidden');
-      // En otra tarea: crear el sonido para comprobarlo cuesta ~60 ms y no debe bloquear la carga.
-      setTimeout(() => this.tapToStart(() => { if (restored) this.afterLogin(); else this.toLogin(); }), 0);
-    });
+    // Carga la partida guardada (o crea una nueva).
+    G.DB.ready();
+    document.getElementById('boot').classList.add('hidden');
+    // En otra tarea: crear el sonido para comprobarlo cuesta ~60 ms y no debe bloquear la carga.
+    setTimeout(() => this.tapToStart(() => this.afterBoot()), 0);
   },
   /**
    * "Pulsa para empezar": los navegadores no dejan que una web suene hasta
-   * que se toca algo. Con esta pantalla la música empieza en cuanto entras.
+   * que se toca algo. Con esta pantalla la mĂºsica empieza en cuanto entras.
    * (Si el navegador ya deja sonar, no sale.)
    */
   tapToStart(then) {
@@ -916,8 +724,7 @@ G.Flow = {
     el.addEventListener('click', go);
     addEventListener('keydown', go, true);
   },
-  toLogin() { G.Audio.music('village'); G.LoginUI.open(); },
-  afterLogin() {
+  afterBoot() {
     G.Audio.music('village');
     if (!G.DB.save.partner) G.TestUI.start();
     else this.goMenu();
@@ -926,22 +733,8 @@ G.Flow = {
     if (G.Game.state !== 'ui') G.Game.toUI();
     G.Audio.music('village');
     G.MenuUI.open();
-    G.LoginUI.offerRecovery();
   },
-  /** Al cerrar el resumen: a la sala si sigues en una, si no al menú. */
-  afterRun() {
-    if (G.Social.room) {
-      if (G.Game.state !== 'ui') G.Game.toUI();
-      G.Audio.music('village');
-      if (G.Social.room.isHost) G.Social.setOpen(true);
-      G.LobbyUI.open();
-    } else this.goMenu();
-  },
-  play() { G.Game.startRun(); },
-  /** Empieza la partida en grupo (el anfitrión la manda a todos). */
-  startCoop(cfg) {
-    if (G.Game.state !== 'ui' || !G.Social.room) return;
-    G.LobbyUI.close();
-    G.Game.startRun(cfg);
-  }
+  /** Al cerrar el resumen: vuelve al menĂº. */
+  afterRun() { this.goMenu(); },
+  play() { G.Game.startRun(); }
 };

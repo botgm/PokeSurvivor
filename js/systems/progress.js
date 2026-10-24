@@ -1,7 +1,7 @@
 /* ============ progress.js — misiones, logros y estadísticas de cuenta ============
  * El juego avisa de lo que pasa con G.Progress.event(tipo, datos):
  *
- *   kill      { types, boss, legend }  (también en las copias del cooperativo)
+ *   kill      { types, boss, legend }
  *   chest     cofre con candado abierto
  *   item      { id }        objeto equipado
  *   evolve    { move }      movimiento evolucionado
@@ -23,9 +23,34 @@
  */
 G.Progress = (() => {
   const TYPES = Object.keys(G.U.TYPE_NAME);
+  const TZ = 'Europe/Madrid';
   let achT = 0, toastQ = [], toastT = 0;
 
   // ---------------- misiones ----------------
+
+  /** Fecha (año, mes, día) en Madrid. */
+  function madridDate(date) {
+    const p = {};
+    for (const x of new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)) p[x.type] = x.value;
+    return { y: +p.year, m: +p.month, d: +p.day };
+  }
+
+  /** Semana ISO (lunes a domingo) de una fecha y-m-d. */
+  function isoWeek(y, m, d) {
+    const t = new Date(Date.UTC(y, m - 1, d));
+    const day = t.getUTCDay() || 7;
+    t.setUTCDate(t.getUTCDate() + 4 - day);
+    const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+    return { year: t.getUTCFullYear(), week: Math.ceil(((t - y0) / 86400000 + 1) / 7) };
+  }
+
+  /** Identificadores del día y la semana actuales (semilla de las misiones). */
+  function periodIds(date = new Date()) {
+    const { y, m, d } = madridDate(date);
+    const w = isoWeek(y, m, d);
+    const p2 = n => String(n).padStart(2, '0');
+    return { d: 'd' + y + p2(m) + p2(d), w: 'w' + w.year + '-' + p2(w.week) };
+  }
 
   function rng(seedStr) {
     let h = 2166136261;
@@ -49,7 +74,7 @@ G.Progress = (() => {
   /** Crea las misiones del día / semana si han cambiado. */
   function ensure(s) {
     if (!s) return;
-    const ids = G.Ranking.periodIds();
+    const ids = periodIds();
     const key = String(s.created || 0);
     s.missions = s.missions || {};
     const M = s.missions;
@@ -168,7 +193,7 @@ G.Progress = (() => {
     else if (performance.now() - achT > 1000) checkAch();
   }
 
-  /** Un enemigo ha caído (anfitrión, solitario o copia en el invitado). */
+  /** Un enemigo ha caído. */
   function kill(e) {
     // Los legendarios de la Sentencia de Arceus no cuentan como jefes (ni para
     // misiones ni para logros de jefes): tienen su propio contador.

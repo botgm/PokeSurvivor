@@ -25,8 +25,8 @@ cambian los Pokémon o las características).
 
 ## 1. Dominio
 
-Los pasos para poner en marcha pokesurvivor.com (DNS en Cloudflare, GitHub Pages,
-Firebase y el paso final) están en [DOMINIO.md](DOMINIO.md).
+Los pasos para poner en marcha pokesurvivor.com (DNS en Cloudflare, GitHub Pages
+y el paso final) están en [DOMINIO.md](DOMINIO.md).
 
 ## 2. Google Search Console (lo más importante)
 
@@ -51,7 +51,7 @@ Google sube las webs que otras webs enlazan y que la gente busca por su nombre:
 - **Reddit**: r/PokemonROMhacks, r/incremental_games, r/WebGames, r/survivorslikes
   (lee sus normas; a muchos les gustan los fan games gratuitos sin anuncios).
 - **Discord**: servidores de fan games de Pokémon y de "survivors-like".
-- **TikTok / Shorts** con clips de 15 s (shinies, legendarios, cooperativo).
+- **TikTok / Shorts** con clips de 15 s (shinies, legendarios).
 - Pide a quien lo juegue que lo enlace o lo comparta: cada enlace cuenta.
 
 ## 4. Con el tiempo

@@ -1,14 +1,14 @@
-/* ============ slots.js — tragaperras pixel art del gacha ============
- * Se dibuja entera en un <canvas> a resolución de arte (176×170) y se escala
+/* ============ slots.js â€” tragaperras pixel art del gacha ============
+ * Se dibuja entera en un <canvas> a resoluciĂ³n de arte (176Ă—170) y se escala
  * sin suavizado, como el resto del juego.
  *
- *   palanca → giran los 3 rodillos → paran uno a uno en el símbolo de la
- *   rareza que ha salido (Poké, Super, Ultra, Lujo y Master Ball, como en
- *   G.Icons.rarity; la estrella roja es el shiny). Si es Épica, Legendaria o shiny, el
- *   último rodillo se hace esperar y las luces se vuelven locas.
- *   La ×10 son 10 tiradas rápidas; cada premio cae como una bola a la bandeja.
+ *   palanca â†’ giran los 3 rodillos â†’ paran uno a uno en el sĂ­mbolo de la
+ *   rareza que ha salido (PokĂ©, Super, Ultra, Lujo y Master Ball, como en
+ *   G.Icons.rarity; la estrella roja es el shiny). Si es Ă‰pica, Legendaria o shiny, el
+ *   Ăºltimo rodillo se hace esperar y las luces se vuelven locas.
+ *   La Ă—10 son 10 tiradas rĂ¡pidas; cada premio cae como una bola a la bandeja.
  *
- * Un clic acelera la animación.
+ * Un clic acelera la animaciĂ³n.
  */
 G.Slots = (() => {
   const W = 176, H = 170, CELL = 30;
@@ -33,14 +33,14 @@ G.Slots = (() => {
     });
   }
 
-  /** Anima las tiradas. → Promise que se resuelve al terminar. */
+  /** Anima las tiradas. â†’ Promise que se resuelve al terminar. */
   async function play(canvas, results) {
     cv = canvas; ctx = cv.getContext('2d');
     fast = false;
     cv.onclick = () => { fast = true; };
     st = {
       t: 0, lever: 0, reels: REEL_X.map(() => ({ off: Math.random() * 400, spin: false, sym: 'ball', bounce: 0, speed: 0 })),
-      ten: results.length === 10, tray: [], led: results.length === 10 ? 'TIRADA ×10' : '¡SUERTE!', ledCol: C.bulbOn, win: null, frenzy: 0, sparks: []
+      ten: results.length === 10, tray: [], led: results.length === 10 ? 'TIRADA Ă—10' : 'Â¡SUERTE!', ledCol: C.bulbOn, win: null, frenzy: 0, sparks: []
     };
     last = performance.now();
     cancelAnimationFrame(raf);
@@ -60,9 +60,9 @@ G.Slots = (() => {
       const big = r.rarity >= 4 || r.shiny;
       for (let k = 0; k < 3; k++) {
         if (k === 2 && big) {
-          // Suspense: el último rodillo frena despacio y las luces parpadean.
+          // Suspense: el Ăºltimo rodillo frena despacio y las luces parpadean.
           st.frenzy = 1;
-          st.led = r.shiny ? '¡¿SHINY?!' : r.rarity === 5 ? '¡¿LEGENDARIO?!' : '¡¿ÉPICO?!';
+          st.led = r.shiny ? 'Â¡Â¿SHINY?!' : r.rarity === 5 ? 'Â¡Â¿LEGENDARIO?!' : 'Â¡Â¿Ă‰PICO?!';
           st.ledCol = colOf(r);
           await tween(v => { st.reels[2].speed = v; }, 520, 120, ten ? 0.5 : 1.1);
         }
@@ -73,7 +73,7 @@ G.Slots = (() => {
       st.frenzy = 0;
       // Premio.
       st.win = { col: colOf(r), t: 0 };
-      st.led = (r.shiny ? 'SHINY · ' : '') + G.Gacha.RARITY_NAME[r.rarity].toUpperCase();
+      st.led = (r.shiny ? 'SHINY Â· ' : '') + G.Gacha.RARITY_NAME[r.rarity].toUpperCase();
       st.ledCol = colOf(r);
       G.Audio.sfx('reveal', { rarity: r.rarity });
       if (r.rarity === 5) G.Audio.sfx('legend');
@@ -153,17 +153,17 @@ G.Slots = (() => {
     let i = 0;
     for (let x = 16; x < 146; x += 7) { bulb(x, 5, i++, winCol); bulb(x, 29, i++, winCol); }
     for (let y = 12; y < 28; y += 7) { bulb(15, y, i++, winCol); bulb(146, y, i++, winCol); }
-    ctx.font = '700 12px Pixelify,"Segoe UI",sans-serif';
+    ctx.font = '700 12px Pixelify,"Pixelify VI","Segoe UI",sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = C.dark; ctx.fillText('POKé SLOTS', W / 2 + 1, 23);
-    ctx.fillStyle = C.trim; ctx.fillText('POKé SLOTS', W / 2, 22);
+    ctx.fillStyle = C.dark; ctx.fillText('POKĂ© SLOTS', W / 2 + 1, 23);
+    ctx.fillStyle = C.trim; ctx.fillText('POKĂ© SLOTS', W / 2, 22);
 
     // --- ventana de rodillos ---
     R(20, 38, 122, 58, C.dark);
     R(21, 39, 120, 56, C.trimD);
     R(23, 41, 116, 52, C.glass);
     st.reels.forEach((rl, k) => drawReel(rl, REEL_X[k]));
-    // Línea de premio.
+    // LĂ­nea de premio.
     const lineCol = st.win ? st.win.col : '#ff5f6d';
     R(22, MID - 1, 3, 2, lineCol); R(137, MID - 1, 3, 2, lineCol);
     if (st.win && st.win.t < 1.2 && Math.floor(st.win.t * 10) % 2 === 0) {
@@ -176,7 +176,7 @@ G.Slots = (() => {
     // --- marcador ---
     R(36, 100, 90, 16, C.dark);
     R(37, 101, 88, 14, C.led);
-    ctx.font = '700 8px Pixelify,"Segoe UI",sans-serif';
+    ctx.font = '700 8px Pixelify,"Pixelify VI","Segoe UI",sans-serif';
     ctx.fillStyle = st.ledCol || C.bulbOn;
     if (!st.frenzy || Math.floor(t * 10) % 2 === 0) ctx.fillText(st.led, 81, 111);
     // Botoncitos decorativos.
@@ -242,7 +242,7 @@ G.Slots = (() => {
       ctx.globalAlpha = 1;
       G.Icons.draw(ctx, rl.sym, x + 6, MID - 12 + by, 24);
     }
-    // Sombra curva del rodillo (arriba y abajo más oscuro).
+    // Sombra curva del rodillo (arriba y abajo mĂ¡s oscuro).
     ctx.globalAlpha = 0.28;
     R(x, REEL_Y, REEL_W, 6, C.reelD); R(x, REEL_Y + REEL_H - 6, REEL_W, 6, C.reelD);
     ctx.globalAlpha = 0.18;

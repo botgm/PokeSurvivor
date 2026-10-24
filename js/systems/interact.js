@@ -8,10 +8,6 @@
  *             abre: monedas, tickets y experiencia para subir un nivel
  *   trap      salta al pisarla (tú o un enemigo) y afecta a todo lo cercano:
  *             veneno, pegajosa (ralentiza) o explosiva
- *
- * Cooperativo: altares y manantiales son de cada uno (en cada ordenador); el
- * cofre y las trampas se rompen como cualquier objeto y el anfitrión reparte
- * el botín y el daño a los enemigos (ver world.destroyProp y coop.propBroken).
  */
 G.Interact = (() => {
   const CHEST_TIME = 3.5;
@@ -23,7 +19,6 @@ G.Interact = (() => {
     { id: 'cd', name: 'Prisa', desc: '-40% recarga', color: '#ffd23f', on: p => { p.cdMul *= 0.6; }, off: p => { p.cdMul /= 0.6; } }
   ];
   const TRAP_R = 74;
-  const authority = () => !G.Coop.active || G.Coop.isHost;
   let healShown = 0, healAcc = 0;
 
   function update(dt, pl) {
@@ -46,7 +41,7 @@ G.Interact = (() => {
           break;
         case 'trap':
           if (!pl.dead && d2 < 13 * 13) G.World.breakProp(p);
-          else if (authority() && G.EnemyMgr.queryCircle(p.x, p.y - 8, 3).some(e => !e.flying && !e.remote)) G.World.breakProp(p);
+          else if (G.EnemyMgr.queryCircle(p.x, p.y - 8, 3).some(e => !e.flying)) G.World.breakProp(p);
           break;
       }
     }
@@ -81,8 +76,7 @@ G.Interact = (() => {
   }
 
   /**
-   * Una trampa salta (en cada ordenador; ver la cabecera). El daño a enemigos
-   * sólo lo hace quien manda; a ti te afecta si estás dentro.
+   * Una trampa salta. El daño a enemigos y a ti si estás dentro.
    */
   function trapEffect(p) {
     const x = p.x, y = p.y - 8, k = p.kind;
@@ -100,13 +94,10 @@ G.Interact = (() => {
 
     const pl = G.Game.player;
     const lvl = pl ? pl.level : 1;
-    if (authority()) {
-      for (const e of G.EnemyMgr.queryCircle(x, y, TRAP_R)) {
-        if (e.remote) continue;
-        if (k === 0) { e.applyPoison(5); e.hurt(14 + lvl * 3, '#d47cf0'); }
-        else if (k === 1) { e.applySlow(0.65, 4.5); e.hurt(4, '#8bd94a'); }
-        else e.hurt(90 + lvl * 18, '#ff7b3d', e.x - x, e.y - y, 220);
-      }
+    for (const e of G.EnemyMgr.queryCircle(x, y, TRAP_R)) {
+      if (k === 0) { e.applyPoison(5); e.hurt(14 + lvl * 3, '#d47cf0'); }
+      else if (k === 1) { e.applySlow(0.65, 4.5); e.hurt(4, '#8bd94a'); }
+      else e.hurt(90 + lvl * 18, '#ff7b3d', e.x - x, e.y - y, 220);
     }
     if (pl && !pl.dead && G.U.dist2(x, y, pl.x, pl.y) < (TRAP_R * 0.7) ** 2) {
       pl.invuln = 0;
